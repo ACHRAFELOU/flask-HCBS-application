@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consultation</title>
+</head>
+<body>
+    <h1>Thermal Image in Real-Time</h1>
+
+    <form method="POST" action="{{ url_for('consultation') }}">
+        <label for="date">Date :</label>
+        <input type="date" name="date" required>
+
+        <label for="note">Note :</label>
+        <textarea name="note" required></textarea>
+
+        <button type="submit">Ajouter la consultation</button>
+    </form>
+
+    <div id="image-container">
+        <img id="thermal-image" src="/thermal_image?id={{ current_user.id }}" alt="Thermal Image" width="700" height="800">
+    </div>
+
+<script>
+    const patientId = "{{ current_user.id }}"; // Utiliser l'ID du patient authentifié
+    const img = document.getElementById('thermal-image');
+
+    // Rafraîchir l'image toutes les secondes
+    setInterval(function() {
+        img.src = `/thermal_image?patient_id=${patientId}&_=${new Date().getTime()}`; // Utilisation de 'patient_id' comme clé
+    }, 1000); // Rafraîchir toutes les secondes
+</script>
+
+</body>
+</html>

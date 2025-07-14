@@ -1,0 +1,258 @@
+{%load static %}
+<!DOCTYPE html>
+<html style="transform: none;">
+  <head>
+
+      <meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+      <meta name="title" content="<?= SITE_NAME ?>">
+      <meta name="description" content="">
+      <meta name="keywords" content="">
+      <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+      <title><?= $titre; ?></title>
+
+      <link rel="shortcut icon" type="{%static 'image/png" href="http://localhost/socialnetwork/themes/wowonder/img/icon.png'%}">
+      <link rel="stylesheet" href="{%static 'css/general-style-plugins.css'%}">
+      <link rel="stylesheet" href="{%static 'css/membre.css'%}">
+      <link rel="stylesheet" href="{%static 'css/font-awesome.css'%}">
+      <script src="js/jquery-3.js"></script>
+      <link rel="stylesheet" href="{%static 'css/design.css'%}">
+
+
+      <style id="theia-sticky-sidebar-stylesheet-TSS">
+        .theiaStickySidebar:after {content: ""; display: table; clear: both;}
+      </style>
+
+      <style type="text/css">
+        undefined + [data-readmore-toggle], undefined[data-readmore]{display: block; width: 100%;}
+        undefined[data-readmore]{transition: height 75ms;overflow: hidden;}
+      </style>
+
+
+    </head>
+
+   <body chat-off="true" style="transform: none; overflow: auto;">
+
+    <div id="focus-overlay"></div>
+
+    <header class="header-container">
+      <div class="navbar navbar-default navbar-fixed-top">
+        <nav class="header-fixed1000">
+          <div class="container-fluid">
+
+            <a class="brand header-brand" href="{%static '/finalprojet'%}" style="margin-top: 1px;">
+              <img src="imgs/sos-cancer-sein.png" alt="<?= SITE_NAME ?>" width="130">
+            </a>
+
+            <ul class="nav navbar-nav navbar-right pull-right" id="head_menu_rght">
+
+              <li class="head_name_links">
+            		<a class="sixteen-font-size" href="">
+            			<span>Accueil</span>
+            		</a>
+            	</li>
+
+              <li class="head_name_links">
+            		<a class="sixteen-font-size" href="{%static 'informations'%}">
+            			<span>Informations</span>
+            		</a>
+            	</li>
+
+              <li class="head_name_links">
+            		<a class="sixteen-font-size" href="{%static 'contact'%}">
+            			<span>Contact</span>
+            		</a>
+            	</li>
+
+
+              <?php if(is_logged_in()): ?>
+
+								<?php
+									if($_SESSION['fonction'] == 'P'){
+								?>
+
+								<li class="head_name_links">
+									<a class="sixteen-font-size" href="{%static 'patient'%}">Mes interpretations</a>
+								</li>
+
+							<?php } ?>
+
+								<li class="head_name_links">
+	            		<a class="sixteen-font-size" href="logout">
+	            			<span>Se déconnecter</span>
+	            		</a>
+	            	</li>
+
+
+
+            			<span class="headtoppoint"></span>
+
+                </ul>
+
+              </li>
+
+            <?php endif; ?>
+
+            </ul>
+          </div>
+        </nav>
+      </div>
+
+      <div class="loader" style="display: none;"></div>
+    </header>
+
+    <div class="content-container container" style="transform: none; margin-top: 25px;">
+      <div class="ad-placement-header-footer"></div>
+
+      <div id="contnet" style="transform: none;">
+        <div class="row page-margin profile wo_user_profile" data-page="timeline" data-id="1">
+
+
+    <div class="col-md-12">
+
+
+        <div id="scroll_filter_click"></div>
+
+			<div class="posts_load">
+
+        <div id="posts" data-story-user="1">
+					<div class="pinned-post-container">
+											</div>
+					    <div class="post-container">
+                <div class="post" >
+                  <div class="panel panel-white panel-shadow">
+
+                    <div class="wo_my_pages events-content-wrapper">
+                    				<div class="my_pages_header row">
+                    					<ul class="pull-left">
+
+                                <li class="active" id="patients">
+                                  <a href="">Interpretations</a>
+                                </li>
+                              </ul>
+
+
+
+                    				</div>
+
+														<div id="followers-list" class="row" style="margin: 0;">
+
+														<!-- Infos du patient -->
+															<h3 style="margin-left: 35px;"> Patient : <?= $membre['nom'] . ' ' . $membre['prenom'] ?> </h3>
+															<h5 style="margin-left: 35px;">Cin : <?= $membre['cin'] ?> </h5>
+															<h5 style="margin-left: 35px;">Sexe : <?= $membre['sexe'] ?> </h5>
+
+
+															<h5 style="margin-left: 35px;">Maladie : <?= $membre['maladies'] ?> </h5>
+
+															<?php
+															  $doc_id = $membre['medecin_id'];
+
+																$medecin = mysqli_query($conn, "SELECT * FROM `medecins` WHERE `idm` = '{$doc_id}'");
+
+																$docteur = mysqli_fetch_assoc($medecin);
+															?>
+															 <h5 style="margin-left: 35px;">Médecin traitant  : <?= $docteur['nom'] . ' ' . $docteur['prenom'] ?> </h5>
+
+                              <!-- liste des interpretations -->
+
+															<?php
+
+																$sql = " SELECT * FROM `interpretations` WHERE `patient_id` = '{$id}' ORDER BY `id` DESC ";
+
+																$result = mysqli_query($conn, $sql);
+
+																if (mysqli_num_rows($result) > 0) {
+
+															?>
+
+
+															<table class="table table-bordered">
+														    <thead class="thead-dark">
+														      <tr style="background-color: black;">
+																		<th scope="col" style="border: 1px solid #ededed; text-align: center; color: white;">Date</th>
+														      <th scope="col" style="border: 1px solid #ededed; text-align: center; color: white;">Nom du médecin</th>
+																		<th scope="col" style="border: 1px solid #ededed; text-align: center; color: white;">Apercu</th>
+														      </tr>
+
+														    </thead>
+														    <tbody>
+
+																	<?php
+																		while($inter = mysqli_fetch_assoc($result)) {
+
+																			$doctor_id = $inter['doctor_id'];
+
+																			$sql1 = "SELECT * FROM `medecins` WHERE `idm` = '{$doctor_id}'";
+
+																			$doctor = mysqli_query($conn, $sql1);
+
+																			$doctor_infos = mysqli_fetch_assoc($doctor);
+
+
+																	?>
+
+
+														      <tr style="border: 1px solid #ededed; ">
+
+																		<td style="border: 1px solid #ededed; color: black;"><?= $inter['created_at'] ?></td>
+
+														        <td style="border: 1px solid #ededed; color: black;"><?= $doctor_infos['nom'] . ' ' . $doctor_infos['prenom']; ?></td>
+
+														        <td style="border: 1px solid #ededed; color: black;">
+																			<a href="<?= base() ?>interpretation/<?= $inter['id'] ?>"> voir</a>
+																		</td>
+
+														      </tr>
+																<?php } ?>
+
+
+														    </tbody>
+														  </table>
+
+
+                             <?php } else{ ?>
+
+                               <h5 class="search-filter-center-text empty_state"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-users"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                                 Aucune interpretation trouvée</h5>
+
+                             <?php } ?>
+
+
+
+
+
+				</div>
+
+				</div>
+      </div>
+
+
+
+    </div>
+                </div>
+  				</div>
+
+							</div>
+
+    </div>
+
+
+</div>
+
+</div>
+<div class="second-footer">
+	<div class="page-margin">
+		<div class="footer-wrapper">
+
+			<div class="footer-powered">
+				<p>© <?= date('Y') ?> <?= SITE_NAME ?>		</p>
+			</div>
+		</div>
+	</div>
+</div>
+
+      </div>
+
+		</body>
+</html>

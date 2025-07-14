@@ -1,0 +1,43 @@
+{% extends 'base_app/head.html' %}
+{% load static %}
+{% block navbar %}
+
+<div class="loginBox">
+
+    <img src="../../static/base_app/img/user.jpg" class="user">
+    <h2>Log In Here</h2>
+    <form method ="post" action="{% url 'connection' %}" class="contact-form">
+        {% csrf_token %}
+        <p>Username</p>
+        <input type="text" name="username" placeholder="Enter Username">
+        <p>password</p>
+        <input type="password" name="password" placeholder="Enter Password">
+        <input type="submit" name="" value="sign In">
+        <a href=""> Forget Password</a>
+    </form>
+
+    <!--    <div class="row">-->
+    <!--        <form method="post" action="" class="">-->
+    <!--            {% csrf_token %}-->
+    <!--            <h2> {{ error }} </h2>-->
+    <!--                <div class="form-group">-->
+    <!--                    <h3> Username </h3>-->
+    <!--                    {{ form.username }}-->
+    <!--                </div>-->
+    <!--                <br>-->
+    <!--                <div class="form-group">-->
+    <!--                    <h3> Mot De Passe </h3>-->
+    <!--                    {{ form.password }}-->
+    <!--                </div>-->
+    <!--                <br>-->
+    <!--                <input type="submit" value="Se Connecter">-->
+    <!--        </form>-->
+    <!--    </div>-->
+</div>
+
+
+{% endblock %}
+</body>
+</html>
+
+

@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <title>HealthCare Bra System - HCBS</title>
+
+    <!-- CSS FILES -->
+    <link href="static/css/bootstrap.min.css" rel="stylesheet">
+    <link href="static/css/bootstrap-icons.css" rel="stylesheet">
+    <link href="static/css/templatemo-kind-heart-charity.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            background-image: url('{{ url_for('static', filename='images/background-breast-cancer.jpg') }}');
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        .card {
+            transition: transform 0.2s;
+            border: 1px solid #ff69b4;
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+        .card:hover {
+            transform: scale(1.05);
+        }
+        .avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin-bottom: 15px;
+            border: 2px solid #ff69b4;
+        }
+        .header-title {
+            color: #343a40;
+            font-weight: bold;
+            margin-bottom: 5px;
+            text-shadow: 1px 1px #000;
+        }
+        .sub-title {
+            color: #e83e8c;
+            font-weight: bold;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+        }
+        .card-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: rgba(255, 228, 225, 0.2);
+        }
+        .card-body {
+            background-color: rgba(255, 250, 240, 0.2);
+        }
+        .btn-primary, .btn-info {
+            background-color: #ff69b4;
+            border-color: #ff69b4;
+        }
+        .btn-primary:hover, .btn-info:hover {
+            background-color: #ff1493;
+            border-color: #ff1493;
+        }
+.card-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 100%;
+}
+
+.btn-custom {
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #17a2b8; /* Couleur personnalisée */
+    border: none;
+    border-radius: 5px;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.btn-custom:hover {
+    background-color: #138496; /* Couleur au survol */
+}
+
+.text-center {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin-top: 15px;
+}
+
+        .cta-section {
+            background-color: rgba(255, 228, 225, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 30px;
+        }
+        .form-group label {
+            color: rgba(0, 0, 0, 0.9);
+            font-weight: bold;
+        }
+  .welcome-bar {
+    background-color: #f0f0f0; /* Fond clair */
+    color: #333; /* Texte en noir */
+    padding: 15px;
+    text-align: center;
+    font-size: 1.8em;
+    font-family: 'Calibri', 'Times New Roman', serif; /* Polices ajustées */
+    font-weight: bold;
+    text-transform: uppercase; /* Texte en majuscules */
+    border-radius: 8px; /* Bords légèrement arrondis */
+    margin-bottom: 20px;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1); /* Ombre légère */
+}
+
+
+        @media (max-width: 576px) {
+            .btn-custom {
+                font-size: 1em;
+            }
+        }
+        .custom-footer-width {
+            max-width: 600px; /* Ajustez cette valeur selon vos besoins */
+            margin: 0 auto; /* Centre l'élément */
+        }
+        .card-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 100%;
+}
+
+.btn-pink {
+    background-color: #ff69b4; /* Couleur rose */
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.btn-pink:hover {
+    background-color: #e55a9e; /* Couleur rose plus foncée au survol */
+}
+
+.text-center {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin-top: 15px;
+}
+
+    </style>
+</head>
+<body id="section_1">
+    <header class="site-header">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8 col-12 d-flex flex-wrap">
+                    <p class="d-flex me-4 mb-0">
+                        <i class="bi-geo-alt me-2"></i>
+                        ENSAM RABAT, B.P.، 6207 Avenue des Forces Armées Royales, Rabat 10100, Maroc
+                    </p>
+                    <p class="d-flex mb-0">
+                        <i class="bi-envelope me-2"></i>
+                        <a href="mailto:achraf_elouerghi@um5.ac.ma">
+                            achraf_elouerghi@um5.ac.ma
+                        </a>
+                    </p>
+                </div>
+                <div class="col-lg-3 col-12 ms-auto d-lg-block d-none">
+                    <ul class="social-icon">
+                        <li class="social-icon-item">
+                            <a href="#" class="social-icon-link bi-twitter"></a>
+                        </li>
+                        <li class="social-icon-item">
+                            <a href="#" class="social-icon-link bi-facebook"></a>
+                        </li>
+                        <li class="social-icon-item">
+                            <a href="#" class="social-icon-link bi-instagram"></a>
+                        </li>
+                        <li class="social-icon-item">
+                            <a href="#" class="social-icon-link bi-youtube"></a>
+                        </li>
+                        <li class="social-icon-item">
+                            <a href="#" class="social-icon-link bi-whatsapp"></a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <nav class="navbar navbar-expand-lg bg-light shadow-lg">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <img src="static/images/logo.png" class="logo img-fluid" alt="Kind Heart Charity">
+                <span>
+                    HealthCare Bra System - HCBS
+                    <small>Smart Bra</small>
+                </span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link click-scroll" href="{{ url_for('indexe')}}">Accueil</a>
+                    </li>
+                    <li class="nav-item">
+<a class="nav-link click-scroll" href="{{ url_for('indexe') }}#section_2">Informations</a>
+                    </li>
+
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <section class="hero-section hero-section-full-height">
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="container mt-5">
+                        <div class="welcome-bar">Bienvenue sur le portail d'authentification</div>
+
+                        <!-- Section Connexion -->
+                        <div class="row mt-5">
+                            <div class="col-md-6 mb-4">
+                                <div class="card shadow-sm">
+                                    <div class="card-header">
+                                        <img src="{{ url_for('static', filename='images/patient-avatar.png') }}" alt="Avatar Patient" class="avatar">
+                                        <h5>Connexion Patient</h5>
+                                    </div>
+                                    <div class="card-body d-flex align-items-center justify-content-center flex-column">
+    <form action="{{ url_for('login_patient') }}" method="POST" class="w-100">
+        <div class="form-group">
+            <label for="username_patient">Nom d'utilisateur</label>
+            <input type="text" id="username_patient" name="username" class="form-control" required>
+        </div>
+        <div class="form-group">
+            <label for="password_patient">Mot de passe</label>
+            <input type="password" id="password_patient" name="password" class="form-control" required>
+        </div>
+        <div class="text-center">
+            <button type="submit" class="btn btn-pink btn-custom">Se connecter</button>
+        </div>
+    </form>
+    <a href="{{ url_for('register_patient') }}" class="btn btn-custom mt-3">S'inscrire comme Patient</a>
+</div>
+
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <div class="card shadow-sm">
+                                    <div class="card-header">
+                                        <img src="{{ url_for('static', filename='images/medecin-avatar.png') }}" alt="Avatar Médecin" class="avatar">
+                                        <h5>Connexion Médecin</h5>
+                                    </div>
+                                    <div class="card-body d-flex align-items-center justify-content-center flex-column">
+    <form action="{{ url_for('login_medecin') }}" method="POST" class="w-100">
+        <div class="form-group">
+            <label for="username_medecin">Nom d'utilisateur</label>
+            <input type="text" id="username_medecin" name="username" class="form-control" required>
+        </div>
+        <div class="form-group">
+            <label for="password_medecin">Mot de passe</label>
+            <input type="password" id="password_medecin" name="password" class="form-control" required>
+        </div>
+        <div class="text-center">
+            <button type="submit" class="btn btn-pink btn-custom">Se connecter</button>
+        </div>
+    </form>
+    <a href="{{ url_for('register_medecin') }}" class="btn btn-custom mt-3">S'inscrire comme Médecin</a>
+</div>
+
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Fin Section Connexion -->
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+  <footer class="site-footer">
+    <div class="container">
+        <div class="row">
+            <div class="col-12 text-center custom-footer-width">
+                <p class="mb-0">© 2023 HealthCare Bra System. Tous droits réservés.</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12 text-center">
+                <ul class="social-icon">
+                    <li class="social-icon-item"><a href="#" class="social-icon-link bi-twitter"></a></li>
+                    <li class="social-icon-item"><a href="#" class="social-icon-link bi-facebook"></a></li>
+                    <li class="social-icon-item"><a href="#" class="social-icon-link bi-instagram"></a></li>
+                    <li class="social-icon-item"><a href="#" class="social-icon-link bi-youtube"></a></li>
+                    <li class="social-icon-item"><a href="#" class="social-icon-link bi-whatsapp"></a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</footer>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

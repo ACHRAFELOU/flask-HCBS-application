@@ -1,0 +1,893 @@
+<!-- templates/dashboard_patient.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <body id="section_1">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <title>HealthCare Bra System - HCBS</title>
+
+    <!-- CSS FILES -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-icons.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/templatemo-kind-heart-charity.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
+
+        <style>
+        body {
+            background-color: #f8f9fa;
+            background-image: url('{{ url_for('static', filename='images/background-breast-cancer1 - Copie.jpg') }}');
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        .card {
+            transition: transform 0.2s;
+            border: 1px solid #ff69b4;
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+        .card:hover {
+            transform: scale(1.05);
+        }
+        .avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin-bottom: 15px;
+            border: 2px solid #ff69b4;
+        }
+        .header-title {
+            color: #343a40;
+            font-weight: bold;
+            margin-bottom: 5px;
+            text-shadow: 1px 1px #000;
+        }
+        .sub-title {
+            color: #e83e8c;
+            font-weight: bold;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+        }
+        .card-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: rgba(255, 228, 225, 0.2);
+        }
+        .card-body {
+            background-color: rgba(255, 250, 240, 0.2);
+        }
+        .btn-primary, .btn-info {
+            background-color: #ff69b4;
+            border-color: #ff69b4;
+        }
+        .btn-primary:hover, .btn-info:hover {
+            background-color: #ff1493;
+            border-color: #ff1493;
+        }
+.card-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 100%;
+}
+
+.btn-custom {
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #17a2b8; /* Couleur personnalisée */
+    border: none;
+    border-radius: 5px;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.btn-custom:hover {
+    background-color: #138496; /* Couleur au survol */
+}
+
+.text-center {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin-top: 15px;
+}
+
+        .cta-section {
+            background-color: rgba(255, 228, 225, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 30px;
+        }
+        .form-group label {
+            color: rgba(0, 0, 0, 0.9);
+            font-weight: bold;
+        }
+  .welcome-bar {
+    background-color: #f0f0f0; /* Fond clair */
+    color: #333; /* Texte en noir */
+    padding: 15px;
+    text-align: center;
+    font-size: 1.8em;
+    font-family: 'Calibri', 'Times New Roman', serif; /* Polices ajustées */
+    font-weight: bold;
+    text-transform: uppercase; /* Texte en majuscules */
+    border-radius: 8px; /* Bords légèrement arrondis */
+    margin-bottom: 20px;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1); /* Ombre légère */
+}
+
+
+        @media (max-width: 576px) {
+            .btn-custom {
+                font-size: 1em;
+            }
+        }
+        .custom-footer-width {
+            max-width: 600px; /* Ajustez cette valeur selon vos besoins */
+            margin: 0 auto; /* Centre l'élément */
+        }
+        .card-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 100%;
+}
+
+.btn-pink {
+    background-color: #ff00ff; /* Couleur rose */
+    border: none;
+    color: #ffffff;
+    padding: 10px 20px;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.btn-pink:hover {
+    background-color: #e55a9e; /* Couleur rose plus foncée au survol */
+}
+
+.text-center {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin-top: 15px;
+}
+
+         body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f8f9fa;
+            color: #4a4a4a;
+            padding-bottom: 20px;
+        }
+
+        .dashboard-header {
+            background-color: #e91e63;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 15px;
+        }
+
+        .profile-section {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .profile-section h2 {
+            color: #e91e63;
+            margin-bottom: 10px;
+        }
+
+        .profile-section img {
+            border-radius: 50%;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .consultation-online {
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .btn-success {
+            background-color: #e91e63;
+            border: none;
+            color: #fff;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-success:hover {
+            background-color: #d81b60;
+        }
+
+        .upload-section,
+        .consultations-table {
+            margin-top: 30px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .upload-section h5,
+        .consultations-table h2 {
+            color: #e91e63;
+        }
+
+        .table th {
+            background-color: #e91e63;
+            color: white;
+        }
+
+        /* Modal styles */
+        .modal-header {
+            background-color: #e91e63;
+            color: white;
+        }
+
+        .modal-title {
+            color: #fff;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            border: none;
+        }
+
+        .btn-primary {
+            background-color: #e91e63;
+            border: none;
+        }
+
+        .btn-danger {
+            background-color: #d9534f;
+            border: none;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .profile-section {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .upload-section, .consultations-table {
+                width: 100%;
+            }
+        }
+
+    body {
+        font-family: Arial, sans-serif; /* Ajout d'une police de base */
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box; /* Pour un meilleur contrôle de la mise en page */
+    }
+
+    .dashboard-header {
+        background-color: #007bff;
+        color: white;
+        padding: 20px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .container {
+        max-width: 1200px; /* Limite la largeur du conteneur principal */
+        margin: 0 auto; /* Centre le conteneur */
+        margin-top: 30px;
+        background: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+
+    }
+
+    .profile-section {
+        display: flex;
+        flex-wrap: wrap; /* Permet aux éléments de s'enrouler sur plusieurs lignes */
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 30px;
+    }
+
+    .profile-section div {
+        flex: 1; /* Permet aux éléments d'occuper un espace égal */
+        min-width: 300px; /* Largeur minimale pour chaque section */
+        margin-right: 20px; /* Espace entre les sections */
+    }
+
+    .profile-section img {
+        max-width: 100%; /* L'image ne dépassera pas la largeur de son conteneur */
+        height: auto; /* Garde les proportions de l'image */
+    }
+
+    .consultations-table {
+        margin-top: 30px;
+    }
+
+    .upload-section {
+        margin-top: 30px;
+    }
+
+    #thermalImage {
+        max-width: 100%;
+        height: auto;
+
+    }
+
+    #thermalCanvas {
+        display: none; /* Hide the canvas by default */
+    }
+
+    /* Responsiveness pour les petits écrans */
+    @media (max-width: 768px) {
+        .profile-section {
+            flex-direction: column; /* Empile les sections verticalement sur les petits écrans */
+            align-items: flex-start; /* Aligne les éléments à gauche */
+        }
+
+        .profile-section div {
+            margin-right: 0; /* Supprime l'espace à droite */
+            margin-bottom: 20px; /* Ajoute de l'espace en bas */
+        }
+
+        .upload-section, .consultations-table {
+            width: 100%; /* Assure que ces sections occupent toute la largeur */
+        }
+    }
+
+    .title {
+        font-size: 2.2rem; /* Taille de la police pour le titre */
+        font-weight: bold; /* Gras pour le titre */
+        color: #000000; /* Couleur principale */
+        text-align: center; /* Centre le texte */
+        margin-bottom: 20px; /* Espace en bas */
+        text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2); /* Ombre pour le titre */
+    }
+
+    .subtitle {
+        font-size: 1.4rem; /* Taille de la police pour le sous-titre */
+        font-weight: 500; /* Poids de la police pour le sous-titre */
+        color:#ff0000; /* Couleur grise pour le sous-titre */
+        text-align: center; /* Centre le texte */
+        margin-bottom: 20px; /* Espace en bas */
+        font-style: italic; /* Italique pour le sous-titre */
+    }
+
+.btn-pink {
+    background-color: #d5006d; /* Couleur rose */
+    color: white; /* Couleur du texte en blanc */
+}
+
+    .container {
+        background-color: #f9f9f9;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+          max-width: 1200px; /* Limite la largeur du conteneur principal */
+        margin: 0 auto; /* Centre le conteneur */
+        padding: 15px; /* Ajoute un peu de rembourrage */
+    }
+
+
+    h1 {
+        color: #007bff;
+        font-size: 2rem; /* Taille de la police pour le titre */
+    }
+
+    h5 {
+        color: #555;
+        font-weight: 400; /* Poids de la police pour le sous-titre */
+    }
+
+    .consultation-online h5 {
+        color: #d5006d; /* Couleur rose pour le titre de la consultation */
+        font-weight: bold; /* Poids de la police pour le titre de la consultation */
+        font-size: 1.5rem; /* Taille de police du titre de la consultation */
+    }
+
+    .logo-container {
+    width: 150px; /* Largeur du conteneur du logo */
+    height: 150px; /* Hauteur du conteneur du logo */
+    border: 1px solid #d5006d; /* Contour rose */
+    border-radius: 100%; /* Arrondir les bords pour faire un cercle */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 auto 10px; /* Centrer et ajouter un espace en bas */
+    background-color: #fff; /* Fond blanc pour le conteneur */
+    overflow: hidden; /* Masquer tout débordement */
+    margin-bottom: 15px;
+
+}
+
+
+.logo-img {
+    transition: transform 0.3s ease; /* Transition douce pour le zoom */
+    width: 80%; /* Ajustez la taille de l'image à l'intérieur du conteneur */
+}
+
+.logo-container:hover .logo-img {
+    transform: scale(1.2); /* Agrandir l'image à 120% au survol */
+}
+
+    .logo-img {
+        max-width: 80%; /* Ajuster la taille de l'image à l'intérieur du conteneur */
+        max-height: 80%; /* Ajuster la taille de l'image à l'intérieur du conteneur */
+    }
+
+    .form-label {
+        font-weight: bold;
+    }
+
+    .btn {
+        font-size: 16px;
+    }
+
+    #status {
+        font-size: 18px;
+        color: #28a745; /* Couleur pour les messages de succès */
+        text-align: center;
+
+    }
+    .text-pink {
+    color: #ff00ff; /* Ajustez cette couleur si besoin */
+    font-size: 1.2rem; /* Taille ajustable selon vos préférences */
+}
+
+.font-weight-bold {
+    font-weight: bold;
+}
+        .dashboard-header {
+            background-color: #e91e63;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+</style>
+</head>
+
+
+        <nav class="navbar navbar-expand-lg bg-light shadow-lg">
+
+            <a class="navbar-brand" href="index.html">
+             <img src="{{ url_for('static', filename='images/logo.png') }}" class="logo img-fluid" alt="Kind Heart Charity">
+                <span>
+                    HealthCare Bra System - HCBS
+                    <small>Smart Bra</small>
+                </span>
+            </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link click-scroll" href="{{ url_for('indexe')}}">Accueil</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link click-scroll" href="{{ url_for('indexe') }}#section_2">Informations</a>
+                    </li>
+                      <li class="nav-item">
+                <a class="nav-link custom-btn custom-border-btn btn" href="{{ url_for('logout') }}" >Déconnexion</a>
+</li>
+                </ul>
+            </div>
+
+    </nav>
+
+        <header class="site-header">
+                <div class="row">
+
+                </div>
+            </div>
+        </header>
+    <div class="container-fluid">
+        <div class="profile-section d-flex justify-content-between align-items-center my-4">
+            <div>
+
+                <ul class="list-unstyled">
+                    <li><strong>Patient:</strong> {{ patient.first_name}} {{ patient.last_name }}</li>
+                    <li><strong>CIN:</strong> {{ patient.cin }}</li>
+                    <li><strong>Email:</strong> {{ patient.email }}</li>
+                    <li><strong>Ville:</strong> {{ patient.ville }}</li>
+                    <li><strong>Médecin:</strong> {{ patient.medecin.first_name }} {{ patient.medecin.last_name }}</li>
+                </ul>
+            </div>
+            <div>
+<img src="{{ url_for('static', filename='uploads/photos/' + patient.photo) }}" alt="Photo de profil" width="200" style="float: right; margin-left: 10px;">
+            </div>
+        </div>
+ <div class="consultation-online">
+    <h1 class="title">Utilisez votre Smart Bra HCBS pour un Auto-Dépistage</h1>
+    <h5 class="subtitle">
+        <i class="fas fa-exclamation-triangle me-2" style="color: #ff0000;"></i>
+        Restez dans un environnement stable pour commencer.
+    </h5>
+</div>
+    <div class="mb-4">
+        <label for="portSelect" class="form-label"><i class="fas fa-link"></i> Sélectionner le Port :</label>
+        <select id="portSelect" class="form-select" onchange="updateSelectedValues()">
+            <option value="">-- Choisir un port --</option>
+            <!-- Options de port seront ajoutées ici -->
+        </select>
+
+        <div class="consultation-online ">
+            <h5 class="text-pink font-weight-bold mb-3">Consultation en Ligne</h5>
+<div class="logo-container">
+    <img src="{{ url_for('static', filename='icons/hcbs_logo.png') }}" alt="Logo HCBS" width="80" class="logo-img">
+</div>
+            <button class="btn btn-pink" data-toggle="modal" data-target="#thermalImageModal" style="padding: 10px 20px; border-radius: 8px;">
+                Commençer
+            </button>
+        </div>
+    </div>
+
+
+        <div class="container">
+                <div id="status" class="mt-3 text-center"></div>
+
+            <h5>Téléverser un document médical</h5>
+            <form action="{{ url_for('upload_file', patient_id=patient.id) }}" method="POST" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="document_type">Type de document</label>
+                    <select id="document_type" name="document_type" class="form-control">
+                        <option value="IRM">IRM</option>
+                        <option value="Scanner">Scanner</option>
+                        <option value="Ordonnance">Ordonnance</option>
+                        <option value="Analyse">Analyse</option>
+                        <option value="Autre">Autre (à spécifier)</option>
+                    </select>
+                </div>
+
+               <div class="form-group" id="other-type-group" style="display: none; margin-bottom: 15px;">
+    <label for="other-type" class="font-weight-bold">Spécifiez le type de document</label>
+    <input type="text" name="other_type" id="other-type" class="form-control" placeholder="Entrez le type de document">
+</div>
+
+<div class="form-group" style="margin-bottom: 15px;">
+    <label for="file" class="font-weight-bold">Choisir un fichier</label>
+    <input type="file" name="file" class="form-control-file" required>
+</div>
+
+<button type="submit" class="btn btn-primary mt-3" style="padding: 10px 20px; border-radius: 8px;">
+    Téléverser
+</button>
+
+            </form>
+        </div>
+
+        <script>
+            document.getElementById('document_type').addEventListener('change', function() {
+                var otherTypeGroup = document.getElementById('other-type-group');
+                if (this.value === 'Autre') {
+                    otherTypeGroup.style.display = 'block';
+                } else {
+                    otherTypeGroup.style.display = 'none';
+                }
+            });
+        </script>
+
+        <div class="consultations-table my-4">
+            <h2>Mes Consultations</h2>
+
+            <table class="table table-bordered table-striped">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>Type</th>
+                        <th>Date</th>
+                        <th>Document</th>
+                        <th>Commentaires</th>
+                    </tr>
+                </thead>
+
+               <tbody>
+    {% for diagnostic in patient.diagnostics %}
+    <tr>
+     <td>
+                    {% if diagnostic.type == 'Vidéo' %}
+                        Autodépistage
+                    {% else %}
+                        {{ diagnostic.type }}
+                    {% endif %}
+                </td>
+
+        <td>{{ diagnostic.date.strftime('%d/%m/%Y %H:%M') }}</td>
+   <td>
+                            {% if diagnostic.file.endswith('.mp4') or diagnostic.file.endswith('.webm') %}
+                                <a href="#" data-toggle="modal" data-target="#videoModal" onclick="setVideoSource('{{ url_for('static', filename='uploads/videos/' + diagnostic.file) }}')"style="color: #c71585;">
+    <i class="fas fa-eye"></i> Voir la consultation</a>
+                            {% else %}
+                                <a href="{{ url_for('static', filename='uploads/document/' + diagnostic.file) }}" style="color: #c71585;"> <i class="fas fa-eye"></i> Voir le document</a>
+                            {% endif %}
+                        </td>
+        <td>
+            {% if diagnostic.commentaires %}
+                {% for comment in diagnostic.commentaires %}
+                    <div>
+                        <strong>Dr {{ comment.medecin.first_name }} {{ comment.medecin.last_name }}:</strong> {{ comment.text }} <br>
+                        <em>(le {{ comment.date_creation.strftime('%d/%m/%Y %H:%M') }})</em>
+                        {% if comment.file %}
+                            <a href="{{ url_for('static', filename='uploads/document' + comment.file) }}" target="_blank">Voir le fichier joint</a>
+                        {% endif %}
+                        {% if comment.reponses %}
+                            <div style="margin-left: 20px; border-left: 2px solid #007bff; padding-left: 10px;">
+                                {% for reponse in comment.reponses %}
+                                <strong>Réponses du Patient. {{ reponse.patient.first_name }} {{ reponse.patient.last_name }} :</strong>
+                                   <p><em>{{ reponse.contenu }}</em> (le {{ reponse.date_creation.strftime('%d/%m/%Y %H:%M') }})</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <form action="{{ url_for('repondre_commentaire', commentaire_id=comment.id) }}" method="POST">
+                            <div class="form-group mt-2">
+                                <textarea name="contenu" class="form-control" rows="2" placeholder="Votre réponse..." required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-secondary">Répondre</button>
+                        </form>
+                    </div>
+                {% endfor %}
+            {% else %}
+              <em>Aucun commentaire disponible.</em>
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+</tbody>
+
+            </table>
+        </div>
+    </div>
+
+        <!-- Modal pour l'image thermique -->
+<div class="modal fade" id="thermalImageModal" tabindex="-1" aria-labelledby="thermalImageModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="thermalImageModalLabel">Image Thermique</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body text-center">
+           <img id="thermalImage" class="img-fluid" src="/thermal_image?patient_id={{ patient.id }}&port={{ port }}" alt="Thermal Image" style="max-width: 100%; height: auto;">
+                <canvas id="thermalCanvas" class="w-100 mt-3"></canvas> <!-- Le canvas est mis en pleine largeur avec un espace en haut -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
+                <button id="start-recording" class="btn btn-primary">Démarrer l'enregistrement</button>
+                <button id="stop-recording" class="btn btn-danger" disabled>Arrêter l'enregistrement</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour la vidéo -->
+<div class="modal fade" id="videoModal" tabindex="-1" aria-labelledby="videoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="videoModalLabel">Visionner la Vidéo</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body text-center">
+                <video id="videoPlayer" class="w-100" controls style="max-width: 100%; height: auto;">
+                    <source id="videoSource" src="" type="video/mp4">
+                    Votre navigateur ne prend pas en charge la lecture des vidéos.
+                </video>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    let patientId = '{{ patient.id }}';
+    let port = '';
+    const imgElement = document.getElementById('thermalImage');
+
+    let mediaRecorder;
+    let recordedChunks = [];
+    let canvas = document.getElementById('thermalCanvas');
+    let ctx = canvas.getContext('2d');
+    let fetchInterval; // Intervalle global pour le rafraîchissement d'image
+    let captureInterval;
+
+    function fetchAvailablePorts() {
+        fetch('/available_ports')
+            .then(response => response.json())
+            .then(data => {
+                const portSelect = document.getElementById('portSelect');
+                portSelect.innerHTML = '';
+                data.ports.forEach(p => {
+                    const option = document.createElement('option');
+                    option.value = p;
+                    option.textContent = p;
+                    portSelect.appendChild(option);
+                });
+                if (data.ports.length > 0) {
+                    port = data.ports[0];
+                    portSelect.value = port;
+                }
+            })
+            .catch(error => console.error('Erreur lors de la récupération des ports:', error));
+            document.getElementById('thermalImage').src = '/static/images/default_image.png';
+
+    }
+
+    function updateSelectedValues() {
+        const portSelect = document.getElementById('portSelect');
+        port = portSelect.value;
+    }
+
+    function startFetchingThermalImage() {
+        fetchInterval = setInterval(fetchThermalImage, 100); // Mettre à jour l'image toutes les secondes
+    }
+
+    function stopFetchingThermalImage() {
+        clearInterval(fetchInterval); // Arrêter le rafraîchissement d'image
+    }
+
+    function fetchThermalImage() {
+        const url = `/thermal_image?patient_id=${patientId}&port=${port}&_=${new Date().getTime()}`;
+        fetch(url)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Erreur lors de la récupération de l'image");
+                }
+                return response.blob();
+            })
+            .then(imageBlob => {
+                const imageObjectURL = URL.createObjectURL(imageBlob);
+                imgElement.src = imageObjectURL;
+
+                // Dessiner l'image sur le canvas en temps réel
+                imgElement.onload = function() {
+                    ctx.drawImage(imgElement, 0, 0, canvas.width, canvas.height);
+                };
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+            });
+    }
+
+    window.onload = function() {
+        fetchAvailablePorts();
+        startFetchingThermalImage(); // Démarrer le rafraîchissement d'image lors du chargement
+    };
+
+    document.getElementById('start-recording').onclick = function() {
+        // Configurer le canvas et le contexte pour le flux d'enregistrement
+        canvas.width = imgElement.width;
+        canvas.height = imgElement.height;
+
+        const stream = canvas.captureStream(60); // 60 FPS
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+
+        mediaRecorder.ondataavailable = function(event) {
+            if (event.data.size > 0) {
+                recordedChunks.push(event.data);
+            }
+        };
+
+        mediaRecorder.onstop = function() {
+
+            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            // Création d'un FormData pour téléverser la vidéo
+            let formData = new FormData();
+            formData.append('video', blob, `thermal_video_${patientId}.webm`);
+
+            fetch(`/upload_video?patient_id=${patientId}`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('Vidéo téléchargée avec succès.');
+                } else {
+                    console.error('Erreur lors du téléchargement:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+            });
+            recordedChunks = [];
+        };
+
+        mediaRecorder.start();
+        console.log('Enregistrement démarré...');
+
+        document.getElementById('stop-recording').disabled = false;
+        this.disabled = true;
+    };
+
+    document.getElementById('stop-recording').onclick = function() {
+        if (mediaRecorder) {
+            mediaRecorder.stop();
+            console.log('Enregistrement arrêté.');
+            document.getElementById('start-recording').disabled = false;
+            this.disabled = true;
+        } else {
+            console.log('Aucun enregistrement en cours.');
+        }
+    };
+</script>
+
+
+
+        <script>
+            function setVideoSource(source) {
+                document.getElementById('videoSource').src = source;
+                document.getElementById('videoSource').parentElement.load();
+            }
+        </script>
+
+    </div>
+        <div class="text-center">
+            <a href="{{ url_for('logout') }}" class="btn btn-danger">Déconnexion</a>
+        </div>
+    </div>
+    <footer class="text-center my-4">
+    <div class="container">
+        <div class="row">
+            <div class="col-12 text-center custom-footer-width">
+                <p class="mb-0">© 2024 HealthCare Bra System. Tous droits réservés.</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12 text-center">
+                <ul class="social-icon">
+                    <li class="social-icon-item"><a href="#" class="social-icon-link bi-twitter"></a></li>
+                    <li class="social-icon-item"><a href="#" class="social-icon-link bi-facebook"></a></li>
+                    <li class="social-icon-item"><a href="#" class="social-icon-link bi-instagram"></a></li>
+                    <li class="social-icon-item"><a href="#" class="social-icon-link bi-youtube"></a></li>
+                    <li class="social-icon-item"><a href="#" class="social-icon-link bi-whatsapp"></a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</footer>
+   <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+ <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+
+    </body>
+</html>

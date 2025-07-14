@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+{% load static %}
+
+
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="{% static 'base_app/css/grides.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'base_app/css/styless-cons.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'base_app/css/normalizees.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;1,300&display=swap"
+          rel="stylesheet">
+    <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
+    <title>Hope: Votre Prévention et lutte contre le Cancer du sein</title>
+</head>
+<body>
+
+<!--Nav Bar -->
+
+<header>
+    <nav class="row">
+        <div>
+            <a href="#"><img src="{% static 'base_app/img/logo1.png' %}" alt="hope logo" class="logo"></a>
+            <ul class="main-nav">
+
+                <li><a href="{% url 'accueil' %}">Acceuil</a></li>
+                <li><a href="{% url 'accueil' %}">Informations</a></li>
+                <li><a href="{% url 'accueil' %}">Contact</a></li>
+                <li><a href="{% url 'deconnecter' %}">Se deconnecter</a></li>
+                <li><a href="#">Bienvenue, {{ user.username }} </a></li>
+
+            </ul>
+        </div>
+    </nav>
+</header>
+<br><br><br>
+<!-- POSTS -->
+<section id="posts">
+    <div class="container">
+        <div class="row">
+
+            <div class="col-md-12">
+                <div class="col-md-6">
+                    {{user.patient.nom}}<br>
+                    {{user.patient.prénom}}<br>
+
+                </div>
+                <div class="col-md-6">
+                    {{user.patient.cin}}<br>
+                    {{user.patient.quartier}}<br>
+                </div>
+            </div>
+            <!--{% for sts in st %}
+
+              {{sts.nom}}<br>{{sts.prénom}}<br>{{sts.cin}}<br> {{sts.quartier}}
+
+                {% endfor %}-->
+        </div>
+    </div>
+
+
+</section>
+

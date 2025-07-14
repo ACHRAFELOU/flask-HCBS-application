@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Patient</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="dashboard-container">
+        <h1>Welcome to your Dashboard</h1>
+        <div id="temperature-data"></div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+
+        if (!token) {
+            window.location.href = '/';
+        }
+
+        fetch('/get_temperatures', {
+            method: 'GET',
+            headers: {
+                'Authorization': 'Bearer ' + token
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            const temperatures = data.temperatures;
+            const container = document.getElementById('temperature-data');
+
+            temperatures.forEach(temp => {
+                const entry = document.createElement('div');
+                entry.innerText = `Temperature: ${temp.temperature} °C, Timestamp: ${temp.timestamp}`;
+                container.appendChild(entry);
+            });
+        });
+    </script>
+</body>
+</html>

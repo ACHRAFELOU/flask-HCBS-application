@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion Appareil Série</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+
+<div class="container">
+    <h1 class="mt-5">Connexion à l'Appareil Série</h1>
+    <div class="mb-4">
+        <h5>Choisir un port</h5>
+        <select id="selected_port" class="form-control">
+            <option value="">Sélectionnez un port</option>
+        </select>
+        <button id="connect-button" class="btn btn-primary mt-2" disabled>Connecter</button>
+    </div>
+    <div id="status" class="mt-3"></div>
+</div>
+
+<script>
+    async function fetchPorts() {
+        const response = await fetch('/api/ports');
+        const ports = await response.json();
+        const portSelect = document.getElementById('selected_port');
+
+        ports.forEach(port => {
+            const option = document.createElement('option');
+            option.value = port;
+            option.textContent = port;
+            portSelect.appendChild(option);
+        });
+
+        // Activer le bouton si des ports sont disponibles
+        document.getElementById('connect-button').disabled = ports.length === 0;
+    }
+
+    document.getElementById('connect-button').addEventListener('click', async () => {
+        const selectedPortValue = document.getElementById('selected_port').value;
+        if (selectedPortValue) {
+            const response = await fetch('/api/connect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ port: selectedPortValue })
+            });
+
+            const result = await response.json();
+            document.getElementById('status').textContent = result.message || result.error;
+        } else {
+            console.warn('Aucun port sélectionné.');
+        }
+    });
+
+    // Récupérer les ports disponibles au chargement
+    document.addEventListener('DOMContentLoaded', fetchPorts);
+</script>
+
+</body>
+</html>

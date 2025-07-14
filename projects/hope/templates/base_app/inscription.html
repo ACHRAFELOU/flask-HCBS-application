@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+{% load static %}
+{% block navbar %}
+
+<html>
+
+<head>
+    <link rel="stylesheet" type="text/css" href="{% static 'base_app/css/grides.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'base_app/css/styl-dinscription.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'base_app/css/normalizees.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;1,300&display=swap"
+          rel="stylesheet">
+
+    <title> Smart Bra App</title>
+
+</head>
+
+<body>
+<header>
+    <nav class="row">
+        <div>
+            <a href="#"><img src="{% static 'base_app/img/logo1.png' %}" alt="hope logo" class="logo"></a>
+            <ul class="main-nav">
+                <li><a href="{% url 'accueil' %}">Acceuil</a></li>
+                <li><a href="{% url 'accueil' %}">Informations</a></li>
+                <li><a href="{% url 'accueil' %}">Contact</a></li>
+                <li><a href="{% url 'se_connecter' %}">Se Connecter</a></li>
+            </ul>
+        </div>
+    </nav>
+    <section class="connection-form">
+
+        <div class="row" id="contact">
+            <h5> Login </h5>
+        </div>
+
+        <div class="row box">
+            <form method="post" action="{% url 'inscription' %}" class="contact-form">
+                {% csrf_token %}
+                <h5> {{ error }} </h5>
+
+                <div class="row">
+                    <div class="col span-1-of-3">
+                        <label for="username"><h3>Login </h3></label>
+                    </div>
+                    <div class="col span-2-of-3">
+                        {{ form.username }}
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col span-1-of-3">
+                        <label for="password1"><h3> Password </h3></label>
+                    </div>
+
+                    <div class="col span-2-of-3">
+                        {{ form.password1 }}
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col span-1-of-3">
+                        <label for="password2"><h3> Password Confirmation </h3></label>
+                    </div>
+                    <div class="col span-2-of-3">
+                        {{ form.password2 }}
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col span-1-of-3">
+                        <label> &nbsp; </label>
+                    </div>
+                    <div class="col span-2-of-3">
+                        <input type="submit" value="S'inscrire">
+                    </div>
+                </div>
+
+            </form>
+
+        </div>
+    </section>
+
+
+</header>
+
+<footer>
+
+    </div>
+    <div class="row">
+        <p>
+            Copyright &copy; 2020 Par Achraf ELOUERGHI & E2SN
+        </p>
+    </div>
+</footer>
+<!--Section_End 4: Footer   -->
+
+{% endblock %}
+
+</body>
+</html>
+
+

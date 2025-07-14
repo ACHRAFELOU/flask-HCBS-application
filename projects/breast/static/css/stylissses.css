@@ -1,0 +1,168 @@
+.navbar{
+background-color: #fce4ec;
+
+}
+
+.nav-link{
+    color: #880e4f;
+    font-weight: 600;
+}
+.navbar-brand {
+    color: black;
+}
+.image-logo{
+background-color: #fce4ec;
+}
+.cover{
+    position :fixed;
+    width : 100%;
+    height : 100vh;
+    background-image: url( '/static/images/tot.png' );
+}
+.col-lg-4 h1 {
+      color: #000000;
+}
+.btn1 {
+    padding: 8px 15px;
+    border: 0;
+    color: #000000;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.vertical-bar{
+      height:100%;
+      background: #880e4f ;
+      top:0;
+      left:0;
+      position: absolute;
+
+ }
+.search-icons{
+      height: 40%;
+      width: 50px;
+}
+.search-icons .fa{
+      margin: 65px 15px;
+      display:block;
+      color :#fff;
+      font-size:18px;
+      cursor:pointer;
+
+}
+.social-icons{
+      height: 40%;
+      width: 50px;
+      background: #f8bbd0;
+      text-align: center;
+      padding-top:35%;
+      bottom: 0;
+      position: absolute;
+
+}
+.social-icons .fa{
+      color: #000;
+       margin: 25px 15px;
+      display: block;
+      padding: 2px;
+      border:1px solid #000;
+      border-radius:25%;
+      cursor: pointer;
+     }
+.navbar .fa{
+            display: none;
+            }
+@media (max-width: 700px){
+.vertical-bar{
+             display: none;
+}
+.cover{
+    position :fixed;
+    width : 100%;
+    height : 100vh;
+    }
+.home{
+             margin: 80px 40px;
+}
+.navbar{
+            padding: 10px 20px;
+}
+.fa-bars{
+            position:absolute;
+            right: 20px;
+            top: 10px;
+}
+.navbar .fa{
+            display: block;
+            color:#fff;
+            margin:10px 25px;
+            font-size:22px;
+            cursor:pointer;
+}
+.collapse nav-link{
+            height:100vh;
+            width:100px;
+            background: #f48fb1;
+            top:0;
+            right:0px;
+            position:absolute;
+            text-align:left;
+            z-index:2;
+            transition:1s;
+}
+
+}
+.tet {
+color: #fff;
+}
+.navbar-brand{
+font-family:cursive;
+color:#000000;
+font-size:22px;
+}
+.coverregistre{
+    position :fixed;
+    width : 100%;
+    height : 100vh;
+
+
+}
+.modal-body {
+    max-height: calc(123vh - 210px);
+    overflow-y: auto;
+}
+
+.image-ptient{
+      color: #880e4f;
+      padding-right: 85px;
+      padding-right: 85px;
+      vertical-align: middle;
+
+}
+.coverregistre .container{
+    /* On ajoute une marge sur les cotés de l'écran */
+    padding-right: 65px;
+    padding-left: 65px;
+
+    /* Et on centre */
+    margin-right: auto;
+    margin-left: auto;
+}
+.coverregistre .container-fluid{
+  background-color: #f48fb1;
+
+}
+.coverregistre .content-container{
+
+background-image: url( '/static/images/BREAST.jpg' );
+
+}
+.coverregistre .wrapper .login{
+
+background-image: url( '/static/images/back.jpg' );
+
+}
+.coverregistre .wrapper .messages{
+color: #000;
+
+}

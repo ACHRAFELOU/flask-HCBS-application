@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de Bord du Patient</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+        }
+        img {
+            border: 2px solid #000;
+            margin-top: 20px;
+            max-width: 100%;
+            height: auto;
+        }
+        button {
+            margin: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+    </style>
+    <script>
+        let patientId = '{{ patient.id }}'; // Récupérer l'ID patient depuis le contexte
+        let port = ''; // Initialiser le port
+
+        // Fonction pour récupérer les ports série disponibles
+        function fetchAvailablePorts() {
+            fetch('/available_ports')
+                .then(response => response.json())
+                .then(data => {
+                    const portSelect = document.getElementById('portSelect');
+                    portSelect.innerHTML = ''; // Vider la liste actuelle
+                    data.ports.forEach(p => {
+                        const option = document.createElement('option');
+                        option.value = p;
+                        option.textContent = p;
+                        portSelect.appendChild(option);
+                    });
+                    // Sélectionner le premier port par défaut
+                    if (data.ports.length > 0) {
+                        port = data.ports[0];
+                        portSelect.value = port;
+                    }
+                })
+                .catch(error => console.error('Erreur lors de la récupération des ports:', error));
+        }
+
+        function updateSelectedValues() {
+            const portSelect = document.getElementById('portSelect');
+            port = portSelect.value; // Met à jour le port sélectionné
+        }
+
+        function fetchThermalImage() {
+            const url = `/thermal_image?patient_id=${patientId}&port=${port}`;
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Erreur lors de la récupération de l\'image');
+                    }
+                    return response.blob();
+                })
+                .then(imageBlob => {
+                    const imageObjectURL = URL.createObjectURL(imageBlob);
+                    document.getElementById('thermalImage').src = imageObjectURL;
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                });
+        }
+
+        // Récupérer les ports et démarrer le rafraîchissement de l'image au chargement de la page
+        window.onload = function() {
+            fetchAvailablePorts();
+            setInterval(fetchThermalImage, 1000); // Mettre à jour l'image toutes les secondes
+        }
+    </script>
+</head>
+<body>
+    <h1>Tableau de Bord du Patient</h1>
+
+    <label for="portSelect">Sélectionner le Port Série:</label>
+    <select id="portSelect" onchange="updateSelectedValues()"></select>
+
+    <img id="thermalImage" class="img-fluid" src="/thermal_image?patient_id={{ patient.id }}&port={{ port }}" alt="Thermal Image" style="max-width: 100%; height: auto;">
+
+    <button onclick="fetchThermalImage()">Rafraîchir Manuellement</button>
+</body>
+</html>

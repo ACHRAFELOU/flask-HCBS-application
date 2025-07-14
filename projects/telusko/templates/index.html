@@ -1,0 +1,187 @@
+  {% load static %}
+<!DOCTYPE html>
+<html>
+  <head>
+      <title> <?php echo isset($titre) ? $titre . ' ' : ''.SITE_NAME.' '; ?></title>
+      <meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+      <meta name="title" content="SOS Cancer">
+      <meta name="description" content="SOS Cancer du sein: vivre le cancer autrement">
+      <meta name="keywords" content="cancer, cancer du sein">
+      <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+
+      <link rel="stylesheet" href="{% static 'css/general-style-plugins.css' %}">
+
+      <link rel="stylesheet" href="{% static 'css/welcome.css' %}">
+      <link rel="stylesheet" href="{% static 'css/font-awesome.css' %}">
+
+      <script src="{% static 'js/jquery-3.js' %}">
+	  </script>
+
+      <link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+
+  </head>
+
+   <body>
+
+    <div id="focus-overlay"></div>
+
+      <div class="content-container welcome-container" style="">
+
+        <div class="ad-placement-header-footer"></div>
+
+        <div id="contnet">
+          <div id="welcomeheader" class="navbar-default">
+
+						<div class="container">
+          		<div class="logo pull-left">
+          			<a href="{% static ''%}">
+                  <img src="{% static 'imgs/logo.png'%}" alt="Logo" style="height: 28px; ">
+                </a>
+          		</div>
+
+
+          		<ul class="nav navbar-nav navbar-right pull-right">
+
+								<li class="head_name_links">
+	            		<a class="sixteen-font-size" href="">
+	            			<span>Accueil</span>
+	            		</a>
+	            	</li>
+
+	              <li class="head_name_links">
+	            		<a class="sixteen-font-size" href="informations">
+	            			<span>Informations</span>
+	            		</a>
+	            	</li>
+
+	              <li class="head_name_links">
+	            		<a class="sixteen-font-size" href="contact">
+	            			<span>Contact</span>
+	            		</a>
+	            	</li>
+
+					<li class="head_name_links">
+        					<a class="sixteen-font-size" href="Inscription_doctor">Inscription de Médecin</a>
+        				</li>
+
+                <li class="head_name_link" style="margin-left:5px;">
+        					<a class="sixteen-font-size" href="accounts/Inscription_Patient">Inscription de Patient</a>
+        				</li>
+        			</ul>
+
+
+
+          </div>
+
+          <div class="wrapper">
+
+
+
+           <div class="login fadeInUp animated animated_5" style="min-height:304px;">
+
+             <div class="login_left_combo_parent" >
+
+                             <form id="login" action="" class="fadeInUp animated animated_9" method="post">
+
+							 	<p class="title">Identification de Médecin</p>
+
+							 	<input type="text" name="username"  placeholder="Login" autofocus="" value="">
+							 	<input type="password" name="password"  placeholder="Mot de passe">
+
+							 	<div class="login_signup_combo">
+							 		<div class="signup__"></div>
+							 		<div class="login__">
+
+							 			<button type="submit" name="login_medecin" class="btn btn-main">S'identifier</button>
+							 		</div>
+							 	</div>
+
+							 </form>
+
+
+              </div>
+
+              <div class="col-md-6">
+
+				<form id="login"action="" class ="fadeInUp animated animated_9" method="post">
+                	<p class="title">Identification de Patient</p>
+
+                	<input name="user" type="text" placeholder="Login" autofocus="" value="">
+          				<input name="pass" type="password" placeholder="Mot de passe">
+
+                  <div class="login_signup_combo">
+          					<div class="signup__"></div>
+          					<div class="login__">
+
+          						<button type="submit" name="login_patient" class="btn btn-main">S'identifier</button>
+          					</div>
+          				</div>
+
+          			</form>
+          		</div>
+          	</div>
+					<?php else: ?>
+
+						<div class="login fadeInUp animated animated_5">
+
+              <!--<div class="login_left_combo_parent">-->
+
+                <img src="{% static 'imgs/sos-cancer-sein.png'%}" style="position: absolute;width: 100%;height: 100%;border-right: 1px solid rgba(168, 72, 73);float: left;top: 0;left: 0;bottom: 0;right: 0;">
+
+               	<div class="login_left_combo">
+           				<div class="fadeInUp animated animated_9">
+           					<p class="text-danger" style="font-size: 18px;">Dépistage et suivi du cancer du sein</p>
+           				</div>
+
+           			</div>
+
+							<!--</div>-->
+
+
+           	</div>
+
+
+					<?php endif; ?>
+
+            <div class="login fadeInUp animated animated_5" style="margin-top:15px;min-height: 236px;">
+
+               <div class="col-md-12">
+
+                 <div class="animated animated_9" style="padding:15px; text-align: justify;" >
+
+                 	Un cancer signifie la présence de cellules anormales qui se multiplient de façon incontrôlée. Dans le cas du cancer du sein, les cellules peuvent rester dans le sein ou se répandre dans le corps par les vaisseaux sanguins ou lymphatiques. La plupart du temps, la progression d’un cancer du sein prend plusieurs mois et même quelques années. Le cancer du sein est le cancer le plus diagnostiqué chez les femmes à travers le monde, autant avant qu’après la ménopause1. Une femme sur 9 sera atteinte d’un cancer du sein au cours de sa vie et 1 femme sur 27 en mourra. Le plus souvent, le cancer du sein survient après 50 ans. Le taux de survie 5 ans après le diagnostic varie de 80 % à 90 %, selon l’âge et le type de cancer. Le nombre de personnes atteintes a progressé légèrement mais régulièrement, au cours des 3 dernières décennies. Par contre, le taux de mortalité a continuellement diminué au cours de la même période, grâce aux progrès réalisés en matière de dépistage, de diagnostic et de traitement
+
+           			</div>
+           		</div>
+           	</div>
+
+
+
+          </div>
+
+          <!-- footer -->
+          <div class="container">
+
+            <div class="welcome-footer-right pull-right">
+               © 2019 SOS Cancer du sein
+             </div>
+          </div>
+          <!-- /footer -->
+
+</div>
+                  <footer>
+                     </footer>
+         <div class="second-footer">
+                     </div>
+         <div class="extra">
+                     </div>
+      </div>
+
+
+
+
+
+</body>
+</html>

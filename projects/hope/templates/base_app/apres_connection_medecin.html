@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+{% load static %}
+
+
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="{% static 'base_app/css/grides.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'base_app/css/styl-dinscription.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'base_app/css/normalizees.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;1,300&display=swap"
+          rel="stylesheet">
+    <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
+    <title>Hope: Votre Prévention et lutte contre le Cancer du sein</title>
+</head>
+<body>
+
+<!--Nav Bar -->
+
+<header>
+    <nav class="row">
+        <div>
+            <a href="#"><img src="{% static 'base_app/img/logo1.png' %}" alt="hope logo" class="logo"></a>
+            <ul class="main-nav">
+
+                <li><a href="{% url 'accueil' %}">Acceuil</a></li>
+                <li><a href="{% url 'accueil' %}">Informations</a></li>
+                <li><a href="{% url 'accueil' %}">Contact</a></li>
+                <li><a href="{% url 'deconnecter' %}">Se deconnecter</a></li>
+                <li><a href="#">Bienvenue, {{ user.username }} </a></li>
+
+            </ul>
+        </div>
+    </nav>
+</header>
+<!-- POSTS -->
+<section id="posts">
+    <div class="container">
+        <div class="row">
+
+            <div class="col-md-12">
+                <div class="col-md-15">
+                    <h2 class="text-left"> Identité Médecin </h2>
+                    <h3>Nom : {{user.medecin.nom}}</h3>
+                    <h3>Prénom : {{user.medecin.prénom}}</h3>
+                    <h3> CIN : {{user.médecin.cin}}</h3>
+                    <h3>Quartier : {{user.médecin.quartier}}</h3>
+                </div>
+
+            </div>
+            <br><br><br><br><br><br><br><br><br><br>
+
+            <table class="table table-striped">
+                <thead class="thead-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Nom Du Patient</th>
+                    <th>Date</th>
+                    <th>Image</th>
+                    <th>Interpretation</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for obj in p %}
+                <tr>
+                    <td>*</td>
+                    <td>{{obj}}</td>
+
+                    <td>15 Janvier 2020</td>
+                    <td>
+                        <a href="{% url 'show_graph' %}" class="btn btn-secondary">
+                            <i class="fas fa-angle-double-right"></i> Voir Image
+                        </a>
+                    </td>
+                    <td>
+                        <a href="interpretation_medecin.html" class="btn btn-secondary">
+                            <i class="fas fa-angle-double-right"></i> Votre Interprétation
+                        </a>
+                    </td>
+                    {% endfor %}
+                </tr>
+
+
+                <!-- {% for obj in p %}
+                 <p>{{obj.0}}</p>
+                 {% endfor %}-->
+                <!--{% for sts in st %}
+
+    {{sts.nom}}<br>{{sts.prénom}}<br>{{sts.cin}}<br> {{sts.quartier}}
+
+    {% endfor %}-->
+        </div>
+    </div>
+
+
+</section>
+

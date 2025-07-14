@@ -1,0 +1,120 @@
+{%load static%}
+<!DOCTYPE html>
+<html>
+<head>
+      <meta charset='UTF-8'>
+      <meta http-equiv='X-UA-Compatible' content='IE¨=edge'>
+      <title> SOS Cancer </title>
+      <meta name='description' content='SOS Cancer du sein: vivre le cancer autrement'>
+      <meta name='keywords' content='cancer, cancer du sein'>
+      <meta name='viewport' content='width=device-width, initial-scale=1, maximum-scale=1'>
+
+      <link rel='shortcut icon' type='image/png' href=''>
+      <link rel='stylesheet' href="{%static 'css/general-style-plugins.css'%}">
+
+      <link rel='stylesheet' href="{%static 'css/welcome.css'%}">
+      <link rel='stylesheet' href="{%static 'css/font-awesome.css'%}">
+
+      <script src="{% static 'js/jquery-3.js'%}"></script>
+
+     <link rel='stylesheet' href="{%static 'css/style.css'%}">
+
+   </head>
+
+   <body>
+
+    <div id="focus-overlay"></div>
+
+      <div class="content-container welcome-container" style="">
+         <div class="ad-placement-header-footer"></div>
+         <div id="contnet">
+           <div id="welcomeheader" class="navbar-default">
+          	<div class="container">
+
+              <div class="logo pull-left">
+                <a href="">
+                  <img src="{%static 'imgs/logo.png'%}" alt="Logo" style="height: 28px; ">
+                </a>
+              </div>
+
+          		<ul class="nav navbar-nav navbar-right pull-right">
+          			<li class="absul-right">
+          				<a class="mdbtn" href="">S'identifier</a>
+          			</li>
+          		</ul>
+          	</div>
+          </div>
+
+      <div class="wrapper">
+      	<div class="login fadeInUp animated animated_5" style="overflow:visible;">
+
+          <div class="col-md-12">
+
+
+            <form action="Inscription_Patient" method="post">
+                 {% csrf_token %}
+
+
+            	<p class="title"> Nouveau patient</p>
+
+
+              <input type="text" name="first_name"  placeholder="Nom" autofocus="">
+              <input type="text" name="last_name"  placeholder="Prenom" autofocus="">
+              <input type="text" name="username"  placeholder=" Login" autofocus="">
+			  <input type="email" name="email"  placeholder="email">
+			  <input type="password" name="password1"  placeholder="Mot de passe">
+              <input type="password" name="password2"  placeholder="Confirmez le mot de passe">
+              <input type="text" name="cin" id="cin"  placeholder="Votre CIN" style="width:49%;margin-left: 0;" class="text-center">
+              <select name="sexe" id="sexe" class="text-center" style="width:49%;margin-left: 50%; margin-top: -58px;">
+      	        <option value="">Sexe</option>
+      					<option value="Femme">Femme</option>
+      					<option value="Homme">Homme</option>
+      				</select>
+
+              <input type="text" name="date_naissance"   placeholder="Votre date de naissance" autofocus="" style="width:49%;margin-left: 0;" class="text-center">
+
+              <select name="quartier" id="quartier" class="text-center" style="width:49%;margin-left: 50%; margin-top: -58px;">
+      	        <option value="">Quartier</option>
+      					<option value="Riad agdal">Riad agdal</option>
+      					<option value="Hassan">Hassan</option>
+                <option value="Alfath">Alfath</option>
+      					<option value="Yaakoub El Mansour">Yaakoub El Mansour</option>
+                <option value="Souissi">Souissi</option>
+      				</select>
+
+      				<div class="login_signup_combo">
+      					<div class="signup__"></div>
+
+      					<div class="login__">
+      						<button type="submit" name="Inscription_Patient" class="btn btn-main" id="sign_submit"> M'inscrire </button>
+      					</div>
+      				</div>
+
+            </form>
+
+      		</div>
+
+      	</div>
+
+      </div>
+
+
+
+      </div>
+
+			<div class="second-footer">
+				<div class="page-margin">
+					<div class="footer-wrapper">
+
+						<div class="footer-powered">
+							<p>© <?= date('Y') ?> <?= SITE_NAME ?>		</p>
+						</div>
+					</div>
+				</div>
+			</div>
+
+    </div>
+    <style>.cc-bottom{bottom: 2.5em;}</style>
+
+  </body>
+</html>

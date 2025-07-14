@@ -1,0 +1,131 @@
+* {
+  margin: auto;
+  padding: auto;
+  box-sizing: border-box;
+}
+header {
+   color: #000;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 20px;
+  font-weight: 50;
+  text-rendering: optimizeLegibility;
+}
+body{
+background-image:  linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0,0.8)) ,url(img/Backgrro.jpg);
+background-size:cover;
+background-position:center;
+height:100vh;
+}
+
+.row {
+  max-width: 1140px;
+  margin: 0 auto;
+}
+
+
+/*----------------Les Titres--------------*/
+h1 {
+  font-weight: 300;
+  text-transform: uppercase;
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: #fff;
+  font-size: 240%;
+  word-spacing: 4px;
+  letter-spacing: 1px;
+
+}
+
+h2 {
+  font-size: 150%;
+  word-spacing: 2px;
+  text-align: center;
+  margin-bottom: 30px;
+  letter-spacing: 1px;
+  margin-top: 30px;
+  color: #fff;
+  text-transform : capitalize;
+
+}
+h3 {
+  font-size: 100%;
+  margin-bottom: 13px;
+  color: white;
+  margin:  auto;
+  padding: auto;
+  text-transform : capitalize;
+}
+h2:after {
+  display: block;
+  height: 2px;
+  background-color: #ff6b81;
+  content: " ";
+  width: 100px;
+  margin: 0 auto;
+  margin-top: 30px;
+}
+
+/*----------------Les Bouttons--------------*/
+
+input[type=submit] {
+  display: inline-block;
+  padding: 10px 60px;
+  font-weight: 300;
+  text-decoration: none;
+  border-radius: 200px;
+  background-color: #ff6b81;
+  border: 1px solid #ff6b81;
+  color: #fff;
+  margin: 0 auto;
+}
+
+/*---------Section 0 : Headers & Navbar ------------------------------*/
+
+a {
+  padding-top: 20px;
+  font-size: 120%;
+}
+
+.logo {
+  width: 40px;
+  height: auto;
+  float: left;
+  margin-top: 20px;
+  transform: rotate(-45deg);
+
+}
+
+.main-nav {
+  float: right;
+  list-style: none;
+  margin-top: 55px;
+
+}
+.main-nav li {
+  display: inline-block;
+  margin-left: 40px;
+}
+
+.main-nav li a:link,
+.main-nav li a:visited
+ {
+  padding: 8px 0px;
+  color: #fff;
+  text-decoration: none;
+  text-transform: uppercase;
+  font-size: 90%;
+  border-bottom: 2px solid transparent;
+  transition: border-bottom 0.2s;
+}
+.main-nav li a:hover,
+.main-nav li a:active
+ {
+  border-bottom: 2px solid #ff6b81;
+}
+/*----------------Section 1 : Connection Form--------------*/
+
+.connection-form {
+  width: 30%;
+  margin: auto auto;
+
+}

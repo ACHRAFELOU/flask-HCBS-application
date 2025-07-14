@@ -1,0 +1,240 @@
+<!-- templates/dashboard_patient.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <title>HealthCare Bra System - HCBS</title>
+
+    <!-- CSS FILES -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-icons.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/templatemo-kind-heart-charity.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+
+<body id="section_1">
+    <nav class="navbar navbar-expand-lg bg-light shadow-lg">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" class="logo img-fluid" alt="Kind Heart Charity">
+                <span>
+                    HealthCare Bra System - HCBS
+                    <small>Smart Bra</small>
+                </span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link click-scroll" href="{{ url_for('indexe')}}">Accueil</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link click-scroll" href="{{ url_for('indexe') }}#section_2">Informations</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="dashboard-header text-center my-4">
+        <h1>Bienvenue, {{ patient.first_name }} {{ patient.last_name }}</h1>
+    </div>
+
+    <div class="container">
+        <div class="profile-section d-flex justify-content-between align-items-center my-4">
+            <div>
+                <h2>Informations personnelles</h2>
+                <ul class="list-unstyled">
+                    <li><strong>CIN:</strong> {{ patient.cin }}</li>
+                    <li><strong>Email:</strong> {{ patient.email }}</li>
+                    <li><strong>Ville:</strong> {{ patient.ville }}</li>
+                    <li><strong>Médecin:</strong> {{ patient.medecin.username }}</li>
+                </ul>
+            </div>
+            <div>
+                <img src="{{ url_for('static', filename='uploads/photos' + patient.photo) }}" alt="Photo de profil" width="150" class="rounded-circle">
+            </div>
+        </div>
+
+        <div class="consultation-online text-center mt-4">
+            <h1 class="title">Utilisez votre Smart Bra HCBS pour un Auto-Dépistage</h1>
+            <h5 class="subtitle">
+                <i class="fas fa-exclamation-triangle me-2" style="color: #ff0000;"></i>
+                Restez dans un environnement stable pour commencer.
+            </h5>
+        </div>
+
+        <div class="mb-4">
+            <label for="portSelect" class="form-label"><i class="fas fa-link"></i> Sélectionner le Port :</label>
+            <select id="portSelect" class="form-select" onchange="updateSelectedValues()">
+                <option value="">-- Choisir un port --</option>
+                <!-- Options de port seront ajoutées ici -->
+            </select>
+
+            <div class="consultation-online text-center mt-4">
+                <h5 class="text-pink font-weight-bold mb-3">Consultation en Ligne</h5>
+                <div class="logo-container">
+                    <img src="{{ url_for('static', filename='icons/hcbs_logo.png') }}" alt="Logo HCBS" width="80" class="logo-img">
+                </div>
+                <button class="btn btn-pink" data-toggle="modal" data-target="#thermalImageModal" style="padding: 10px 20px; border-radius: 8px;">
+                    Commencer
+                </button>
+            </div>
+        </div>
+
+        <div id="status" class="mt-3 text-center"></div>
+
+        <div class="upload-section my-4">
+            <h5>Téléverser un document médical</h5>
+            <form action="{{ url_for('upload_file', patient_id=patient.id) }}" method="POST" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="document_type">Type de document</label>
+                    <select id="document_type" name="document_type" class="form-control">
+                        <option value="IRM">IRM</option>
+                        <option value="Scanner">Scanner</option>
+                        <option value="Ordonnance">Ordonnance</option>
+                        <option value="Analyse">Analyse</option>
+                        <option value="Autre">Autre (à spécifier)</option>
+                    </select>
+                </div>
+                <div class="form-group" id="other-type-group" style="display: none;">
+                    <label for="other-type">Spécifiez le type de document</label>
+                    <input type="text" name="other_type" id="other-type" class="form-control" placeholder="Entrez le type de document">
+                </div>
+                <div class="form-group">
+                    <label for="file">Choisir un fichier</label>
+                    <input type="file" name="file" class="form-control-file" required>
+                </div>
+                <button type="submit" class="btn btn-primary mt-2">Téléverser</button>
+            </form>
+        </div>
+
+        <script>
+            document.getElementById('document_type').addEventListener('change', function() {
+                var otherTypeGroup = document.getElementById('other-type-group');
+                if (this.value === 'Autre') {
+                    otherTypeGroup.style.display = 'block';
+                } else {
+                    otherTypeGroup.style.display = 'none';
+                }
+            });
+        </script>
+
+        <div class="consultations-table my-4">
+            <h2>Mes Consultations</h2>
+            <table class="table table-bordered table-striped">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>Type</th>
+                        <th>Date</th>
+                        <th>Document</th>
+                        <th>Commentaires</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for diagnostic in patient.diagnostics %}
+                    <tr>
+                        <td>{{ diagnostic.type if diagnostic.type != 'Autre' else other_type }}</td>
+                        <td>{{ diagnostic.date.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td>
+                            {% if diagnostic.file.endswith('.mp4') or diagnostic.file.endswith('.webm') %}
+                                <a href="#" data-toggle="modal" data-target="#videoModal" onclick="setVideoSource('{{ url_for('static', filename='uploads/videos/' + diagnostic.file) }}')">Voir la consultation</a>
+                            {% else %}
+                                <a href="{{ url_for('static', filename='uploads/document/' + diagnostic.file) }}" target="_blank">Voir le document</a>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if diagnostic.commentaires %}
+                                {% for comment in diagnostic.commentaires %}
+                                    <div>
+                                        <strong>Dr {{ comment.medecin.first_name }} {{ comment.medecin.last_name }}:</strong> {{ comment.text }} <br>
+                                        <em>(le {{ comment.date_creation.strftime('%d/%m/%Y %H:%M') }})</em>
+                                        {% if comment.file %}
+                                            <a href="{{ url_for('static', filename='uploads/document' + comment.file) }}" target="_blank">Voir le fichier joint</a>
+                                        {% endif %}
+                                        {% if comment.reponses %}
+                                            <div style="margin-left: 20px; border-left: 2px solid #007bff; padding-left: 10px;">
+                                                {% for reponse in comment.reponses %}
+                                                    <strong>Réponses du Patient. {{ reponse.patient.first_name }} {{ reponse.patient.last_name }} :</strong>
+                                                    <p><em>{{ reponse.contenu }}</em> (le {{ reponse.date_creation.strftime('%d/%m/%Y %H:%M') }})</p>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                        <form action="{{ url_for('repondre_commentaire', commentaire_id=comment.id) }}" method="POST">
+                                            <div class="form-group mt-2">
+                                                <textarea name="contenu" class="form-control" rows="2" placeholder="Votre réponse..." required></textarea>
+                                            </div>
+                                            <button type="submit" class="btn btn-secondary btn-sm">Répondre</button>
+                                        </form>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <em>Aucun commentaire.</em>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center">Aucune consultation trouvée.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="modal fade" id="thermalImageModal" tabindex="-1" role="dialog" aria-labelledby="thermalImageModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="thermalImageModalLabel">Image Thermique</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <img id="thermalImage" src="" alt="Image Thermique" class="img-fluid">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="videoModal" tabindex="-1" role="dialog" aria-labelledby="videoModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="videoModalLabel">Vidéo de Consultation</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <video id="videoPlayer" width="100%" controls>
+                        <source id="videoSource" src="" type="video/mp4">
+                        Votre navigateur ne prend pas en charge la lecture vidéo.
+                    </video>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="text-center my-4">
+        <p>&copy; 2024 HealthCare Bra System. Tous droits réservés.</p>
+    </footer>
+
+    <!-- JS FILES -->
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <script>
+        function setVideoSource(src) {
+            document.getElementById('videoSource').src = src;
+            document.getElementById('videoPlayer').load();
+        }
+    </script>
+</body>
+</html>

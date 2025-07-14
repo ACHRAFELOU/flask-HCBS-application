@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+{% load static %}
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="{% static 'base_app/css/grides.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'base_app/css/styleess.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'base_app/css/normalizees.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;1,300&display=swap"
+          rel="stylesheet">
+
+    <title> Smart Bra App</title>
+</head>
+<body>
+
+<!--Nav Bar -->
+<header>
+    <nav class="row">
+        <div>
+            <a href="#"><img src="{% static 'base_app/img/logo1.png' %}" alt="hope logo" class="logo"></a>
+            <ul class="main-nav">
+                <li><a href="{% url 'accueil' %}">Accueil</a></li>
+                <li><a href="{% url 'accueil' %}">Informations</a></li>
+                <li><a href="{% url 'accueil' %}">Contact</a></li>
+                <li><a href="{% url 'accueil' %}">Se Connecter</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Background Image + Titre + 2 Buttons-->
+    <div class="hero-text-box">
+        <h1> Prévention <br> et lutte contre le Cancer du sein.</h1>
+        <a class="btn btn-full" href="{% url 'se_connecter' %}"> Se Connecter </a>
+        <a class="btn btn-ghost" href="{% url 'inscription' %}"> S'inscrire </a>
+    </div>
+
+
+</header>
+{% block navbar %}
+{% endblock %}
+	

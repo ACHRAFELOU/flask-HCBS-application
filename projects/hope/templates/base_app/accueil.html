@@ -1,0 +1,159 @@
+{% extends 'base_app/base.html' %}
+{% load static %}
+{% block navbar %}
+
+<!-- Background Image + Titre + 2 Buttons-->
+<div class="hero-text-box">
+    <h1> Prévention <br> et lutte contre le Cancer du sein.</h1>
+    <a class="btn btn-full" href="{% url 'connection' %}"> Se Connecter </a>
+    <a class="btn btn-ghost" href="{% url 'inscription' %}"> S'inscrire </a>
+</div>
+
+<!--Section_end 1: Information 01 + Service  -->
+<section class="section-info1" id="information">
+
+    <div class="row" id="cancer">
+        <h2> Le cancer du sein touche une femme sur huit dans le monde </h2>
+        <p class="long-copy">
+            Le cancer est la première cause de mortalité chez les femmes, Une prise en charge précoce permet d'améliorer
+            significativement le pronostic.
+        </p>
+    </div>
+
+    <div class="row">
+        <div class="col span-1-of-3 box">
+            <i> <img src="{% static 'base_app/img/online-icon.png' %}" class="icon"/></i>
+            <h3> 100% En Ligne </h3>
+            <p>
+            </p>
+        </div>
+        <div class="col span-1-of-3 box">
+            <i><img src="{% static 'base_app/img/fast-icon.png' %}" class="icon"/></i>
+            <h3> Rapide </h3>
+            <p>
+                <!--!Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod empor incididunt ut labore et dolore magna aliqua-->
+            </p>
+        </div>
+        <div class="col span-1-of-3 box">
+            <i><img src="{% static 'base_app/img/secure-icon.png' %}" class="icon"/></i>
+            <h3> Sécurisé </h3>
+            <p>
+            </p>
+        </div>
+    </div>
+</section>
+<!--Section_End 1: Information 01 + Service  -->
+
+<!--Section_Start 2: infotmation 02  -->
+<section class="section-info2">
+    <ul class="cancer-images">
+        <li class="col span-1-of-4">
+            <figure class="cancer-image">
+                <img src="{% static 'base_app/img/cancer1.jpg' %}">
+            </figure>
+        </li>
+        <li class="col span-1-of-4">
+            <figure class="cancer-image">
+                <img src="{% static 'base_app/img/cancer2.jpg' %}">
+            </figure>
+        </li>
+        <li class="col span-1-of-4">
+            <figure class="cancer-image">
+                <img src="{% static 'base_app/img/cancer3.jpg' %}">
+            </figure>
+        </li>
+        <li class="col span-1-of-4">
+            <figure class="cancer-image">
+                <img src="{% static 'base_app/img/cancer4.jpg' %}">
+            </figure>
+        </li>
+    </ul>
+</section>
+<!--Section_End 2: infotmation 02  -->
+
+<!--Section 3: Contact   -->
+<section class="section-form">
+
+    <div class="row" id="contact">
+        <h2> Nous Contacez</h2>
+    </div>
+
+    <div class="row">
+        <form method="post" action="#" class="contact-form">
+
+            <div class="row">
+                <div class="col span-1-of-3">
+                    <label for="name"> Nom </label>
+                </div>
+                <div class="col span-2-of-3">
+                    <input type="text" name="name" id="name" placeholder="Votre Nom" required>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col span-1-of-3">
+                    <label for="prenom"> Prénom</label>
+                </div>
+                <div class="col span-2-of-3">
+                    <input type="text" name="prenom" id="prenom" placeholder="Votre Prénom" required>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col span-1-of-3">
+                    <label for="email"> Email </label>
+                </div>
+                <div class="col span-2-of-3">
+                    <input type="email" name="email" id="email" placeholder="Votre Email" required>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col span-1-of-3">
+                    <label for="message"> Message</label>
+                </div>
+                <div class="col span-2-of-3">
+                    <textarea name="message" placeholder="Ecrivez Votre Message" id="message"> </textarea>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col span-1-of-3">
+                    <label> &nbsp; </label>
+                </div>
+
+                <div class="col span-2-of-3">
+                    <input type="submit" value="Envoyer">
+                </div>
+            </div>
+
+        </form>
+
+    </div>
+</section>
+
+<!--Section_start 4: Footer   -->
+<footer>
+    <div class="row">
+        <div class="">
+            <ul class="footer-nav">
+                <li><a href="{% url 'accueil' %}" id="accueil"> Acceuil</a></li>
+                <li><a href="#" id="information"> Informations</a></li>
+                <li><a href="#" id="contact"> Contact</a></li>
+                <li><a href="{% url 'se_connecter' %}"> Se Connecter</a></li>
+                <li><a href="{% url 'inscription' %}"> S'inscrire</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="row">
+        <p>
+            <strong> 2021-2022 <a href="https://linkedin.com/in/achraf-elouerghi-375baa120">EL-OUERGHI E2SN
+                Team </a>.</strong> All rights reserved.
+        </p>
+    </div>
+</footer>
+<!--Section_End 4: Footer   -->
+
+{% endblock %}
+</body>
+</html>

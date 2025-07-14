@@ -1,0 +1,20 @@
+const elements = document.querySelectorAll("input, select, textarea"); 
+elements.forEach((el) => {
+    if (el.type === "checkbox" || el.type === "radio") {
+        localStorage.setItem(el.name, el.checked); // Save the checked state
+    } else {
+        localStorage.setItem(el.name, el.value); // Save the value
+    }
+});
+------------------
+const elements = document.querySelectorAll("input, select, textarea");
+    elements.forEach((el) => {
+        const savedValue = localStorage.getItem(el.name);
+        if (savedValue !== null) {
+            if (el.type === "checkbox" || el.type === "radio") {
+                el.checked = savedValue === "true"; // Restore the checked state
+            } else {
+                el.value = savedValue; // Restore the value
+            }
+        }
+    });

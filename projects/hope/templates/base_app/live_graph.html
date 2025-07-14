@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Live Graph</title>
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
+        <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.6/umd/popper.min.js" integrity="sha384-wHAiFfRlMFy6i5SRaxvfOCifBUQy1xHdJ/yoi7FRNXMRBu5WHdZYu1hA6ZOblgut" crossorigin="anonymous"></script>
+
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
+        {% load staticfiles %}
+        <script src="{% static 'jquery-3.3.1.min.js' %}"></script>
+        <script src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
+
+</head>
+<body>
+    <center>
+    <label>Enter Com PORT:</label>
+    <input type="text" class="form-control col-md-2" name="com" id="comport">
+    <input type="submit" name="submit" id="btn_show" class="btn btn-primary">
+    <h1>Live data from Arduino Sensor</h1>
+        </center>
+
+    <div id="chartContainer" style="height: 450px; width:100%;"></div>
+</body>
+<script>
+$("#btn_show").click(function(){
+    com=$("#comport").val();
+    fill_graph_sensor(com);
+
+});
+function fill_graph_sensor(){
+
+    var dps = [] ; // dataPoints
+    var dps1 = []; // dataPoints
+    var dps2 = []; // dataPoints
+    var dps3 = []; // dataPoints
+    var dps4 = []; // dataPoints
+    var dps5 = []; // dataPoints
+    var dps6 = []; // dataPoints
+    var dps7 = []; // dataPoints
+    var dps8 = []; // dataPoints
+   var chart = new CanvasJS.Chart("chartContainer", {
+	animationEnabled: true,
+	title: {
+		text: "Live Data"
+	},
+	axisX: {
+		title: "Time"
+	},
+	axisY: {
+		title: "Temperature (in °C)",
+		suffix: " °C"
+	},
+	data: [{
+		type: "line",
+		name: "Sensor 1",
+		showInLegend: true,
+		connectNullData: true,
+		//nullDataLineDashType: "solid",
+		xValueType: "dateTime",
+		xValueFormatString: "DD MMM hh:mm TT",
+		yValueFormatString: "#0.## °C",
+		dataPoints: dps
+	},
+	{
+		type: "line",
+		name: "Sensor 2",
+		showInLegend: true,
+		connectNullData: true,
+		//nullDataLineDashType: "solid",
+		xValueType: "dateTime",
+		xValueFormatString: "DD MMM hh:mm TT",
+		yValueFormatString: "#0.## °C",
+		dataPoints: dps1
+	},
+	{
+		type: "line",
+		name: "Sensor 3",
+		showInLegend: true,
+		connectNullData: true,
+		//nullDataLineDashType: "solid",
+		xValueType: "dateTime",
+		xValueFormatString: "DD MMM hh:mm TT",
+		yValueFormatString: "#0.## °C",
+		dataPoints: dps2
+	},
+	{
+		type: "line",
+		name: "Sensor 4",
+		showInLegend: true,
+		connectNullData: true,
+		//nullDataLineDashType: "solid",
+		xValueType: "dateTime",
+		xValueFormatString: "DD MMM hh:mm TT",
+		yValueFormatString: "#0.## °C",
+		dataPoints: dps3
+	},
+	{
+		type: "line",
+		name: "Sensor 5",
+		showInLegend: true,
+		connectNullData: true,
+		//nullDataLineDashType: "solid",
+		xValueType: "dateTime",
+		xValueFormatString: "DD MMM hh:mm TT",
+		yValueFormatString: "#0.## °C",
+		dataPoints: dps4
+	},
+	{
+		type: "line",
+		name: "Sensor 6",
+		showInLegend: true,
+		connectNullData: true,
+		//nullDataLineDashType: "solid",
+		xValueType: "dateTime",
+		xValueFormatString: "DD MMM hh:mm TT",
+		yValueFormatString: "#0.## °C",
+		dataPoints: dps5
+	},
+	{
+		type: "line",
+		name: "Sensor 7",
+		showInLegend: true,
+		connectNullData: true,
+		//nullDataLineDashType: "solid",
+		xValueType: "dateTime",
+		xValueFormatString: "DD MMM hh:mm TT",
+		yValueFormatString: "#0.## °C",
+		dataPoints: dps6
+	},
+	{
+		type: "line",
+		name: "Sensor 8",
+		showInLegend: true,
+		connectNullData: true,
+		//nullDataLineDashType: "solid",
+		xValueType: "dateTime",
+		xValueFormatString: "DD MMM hh:mm TT",
+		yValueFormatString: "#0.## °C",
+		dataPoints: dps7
+	},
+	{
+		type: "line",
+		name: "Sensor 9",
+		showInLegend: true,
+		connectNullData: true,
+		//nullDataLineDashType: "solid",
+		xValueType: "dateTime",
+		xValueFormatString: "DD MMM hh:mm TT",
+		yValueFormatString: "#0.## °C",
+		dataPoints: dps8
+	}]
+});
+
+var xVal = 0;
+var yVal = 100;
+var updateInterval = 1000;
+var dataLength = 100; // number of dataPoints visible at any point
+
+var updateChart = function () {
+
+    $.ajax({
+            type:"get",
+            url: "{% url 'fetch_sensor_values_ajax' %}",
+            data: { 'id': com },
+
+            success: function(data) {
+                console.log(data.result);
+
+                for(index = 0; index < data.result.length; index++) {
+                    var str_array = data.result[index].split(',');
+                    dps.push({ x: Date.parse(str_array[9]),y: Number(str_array[0]) });
+
+		            var str_array = data.result[index].split(',');
+                    dps1.push({x: Date.parse(str_array[9]),y: Number(str_array[1])  });
+
+		            var str_array = data.result[index].split(',');
+                    dps2.push({x: Date.parse(str_array[9]),y: Number(str_array[2])  });
+
+		            var str_array = data.result[index].split(',');
+                    dps3.push({x: Date.parse(str_array[9]),y: Number(str_array[3])  });
+
+                    var str_array = data.result[index].split(',');
+                    dps4.push({x: Date.parse(str_array[9]),y: Number(str_array[4])  });
+
+                    var str_array = data.result[index].split(',');
+                    dps5.push({x: Date.parse(str_array[9]),y: Number(str_array[5])  });
+
+                    var str_array = data.result[index].split(',');
+                    dps6.push({x: Date.parse(str_array[9]),y: Number(str_array[6])  });
+
+                    var str_array = data.result[index].split(',');
+                    dps7.push({x: Date.parse(str_array[9]),y: Number(str_array[7])  });
+
+                    var str_array = data.result[index].split(',');
+                    dps8.push({x: Date.parse(str_array[9]),y: Number(str_array[8])  });
+                   }
+
+
+                    console.log("dps  ....... : ",dps);
+                return data;
+                    },
+            error: function(){
+                    console.log("error he ji");
+                 }
+            });
+
+	if (dps.length > dataLength)  {dps.shift()  ;}
+    if (dps1.length > dataLength) {dps1.shift(); }
+    if (dps2.length > dataLength) {dps2.shift(); }
+    if (dps3.length > dataLength) {dps3.shift(); }
+    if (dps4.length > dataLength) {dps4.shift(); }
+    if (dps5.length > dataLength) {dps5.shift(); }
+    if (dps6.length > dataLength) {dps6.shift(); }
+    if (dps7.length > dataLength) {dps7.shift(); }
+    if (dps8.length > dataLength) {dps8.shift(); }
+	chart.render();
+};
+
+updateChart(dataLength);
+setInterval(function(){updateChart()}, updateInterval);
+
+
+}
+</script>
+</html>

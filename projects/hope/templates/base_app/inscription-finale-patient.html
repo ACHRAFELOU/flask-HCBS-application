@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+{% load static %}
+
+<html>
+
+<head>
+    <link rel="stylesheet" type="text/css" href="{% static 'base_app/css/grides.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'base_app/css/styl-dinscription.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'base_app/css/normalizees.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;1,300&display=swap"
+          rel="stylesheet">
+
+    <title> Smart Bra App</title>
+
+</head>
+
+<body>
+<header>
+    <nav class="row">
+        <div>
+            <a href="#"><img src="{% static 'base_app/img/logo1.png' %}" alt="hope logo" class="logo"></a>
+            <ul class="main-nav">
+                <li><a href="{% url 'accueil' %}">Acceuil</a></li>
+                <li><a href="{% url 'accueil' %}">Informations</a></li>
+                <li><a href="{% url 'accueil' %}">Contact</a></li>
+            </ul>
+
+        </div>
+    </nav>
+    <section class="connection-form">
+
+        <div class="row" id="contact">
+            <h5> Veuillez remplire ce formulaire </h5>
+        </div>
+
+        <div class="row box">
+            <form method="post" action="{% url 'Patformpage' %}" class="contact-form" enctype="multipart/form-data">
+                {% csrf_token %}
+                <h5> {{ error }} </h5>
+
+
+                <div class="row">
+                    <div class="col span-1-of-3">
+                        <label for="nom"><h3>Nom </h3></label>
+                    </div>
+                    <div class="col span-2-of-3">
+                        {{ form.nom }}
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col span-1-of-3">
+                        <label for="prenom"><h3>Prenom </h3></label>
+                    </div>
+                    <div class="col span-2-of-3">
+                        {{ form.prenom }}
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col span-1-of-3">
+                        <label for="cin"><h3>CIN </h3></label>
+                    </div>
+                    <div class="col span-2-of-3">
+                        {{ form.cin }}
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col span-1-of-3">
+                        <label for="sexe"><h3>Sex </h3></label>
+                    </div>
+                    <div class="col span-2-of-3">
+                        {{ form.sexe }}
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col span-1-of-3">
+                        <label for="date_de_naissance"><h3>Date de Naissance </h3></label>
+                    </div>
+                    <div class="col span-2-of-3">
+                        {{ form.date_de_naissance }}
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col span-1-of-3">
+                        <label for="quartier"><h3>Quartier </h3></label>
+                    </div>
+                    <div class="col span-2-of-3">
+                        {{ form.quartier }}
+                    </div>
+                </div>
+
+
+                <div class="row">
+                    <div class="col span-1-of-3">
+                        <label for="picture"><h3>Picture </h3></label>
+                    </div>
+                    <div class="col span-2-of-3">
+                        {{ form.picture }}
+                        <img src="{{request.user.patient.picture.url }}"/>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col span-1-of-3">
+                        <label> &nbsp; </label>
+                    </div>
+                    <div class="col span-1-of-3">
+                        <input type="submit" value="S'inscrire">
+                    </div>
+                </div>
+
+
+            </form>
+            </form>
+        </div>
+    </section>
+</header>
+</body>
+
+</html>
+

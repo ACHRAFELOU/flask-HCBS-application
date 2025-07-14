@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+{% load static %}
+
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="{% static 'base_app/css/grides.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'base_app/css/styl-dinscription.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'base_app/css/normalizees.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;1,300&display=swap"
+          rel="stylesheet">
+
+
+    <title> Smart Bra App</title>
+</head>
+<body>
+{% csrf_token %}
+<!--Nav Bar -->
+<header>
+    <nav class="row">
+        <div>
+            <a href="#"><img src="{% static 'base_app/img/logo1.png' %}" alt="hope logo" class="logo"></a>
+            <ul class="main-nav">
+                <li><a href="{% url 'accueil' %}">Acceuil</a></li>
+                <li><a href="{% url 'accueil' %}">Informations</a></li>
+                <li><a href="{% url 'accueil' %}">Contact</a></li>
+                <li><a href="#">Bienvenue, {{ user.username }} </a></li>
+            </ul>
+        </div>
+    </nav>
+
+
+    <div class="row">
+        <div class="text">
+            <h5>Vous êtes </h5>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col span-1-of-2">
+            <div class="doctor">
+                <div class="col span-1-of-2">
+                    <figure>
+
+                        <a href="{% url 'Medformpage' %}">
+                            <img src="{% static 'base_app/img/doctor.jpg' %}" alt="docteur" width="350px"
+                                 height="350px">
+
+                            <input type="submit" name="docteur" value="Médecin"></a>
+                    </figure>
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="col span-1-of-2">
+            <div class="patient">
+                <div class="col span-1-of-2">
+                    <figure>
+                        <a href="{% url 'Patformpage' %}">
+                            <img src="{% static 'base_app/img/patient.jpg' %}" alt="patient" width="350px"
+                                 height="350px">
+
+                            <input type="submit" name="patient" value="Patient"></a>
+                    </figure>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</header>
+</body>
+</html>

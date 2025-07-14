@@ -1,0 +1,358 @@
+<!-- templates/dashboard_patient.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de Bord Patient</title>
+    <script src="https://www.webrtc-experiment.com/screenshot.js"></script>
+    <script src="https://cdn.webrtc-experiment.com/RecordRTC.js"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+    body {
+        font-family: Arial, sans-serif; /* Ajout d'une police de base */
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box; /* Pour un meilleur contrôle de la mise en page */
+    }
+
+    .dashboard-header {
+        background-color: #007bff;
+        color: white;
+        padding: 20px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .container {
+        max-width: 1200px; /* Limite la largeur du conteneur principal */
+        margin: 0 auto; /* Centre le conteneur */
+        padding: 15px; /* Ajoute un peu de rembourrage */
+    }
+
+    .profile-section {
+        display: flex;
+        flex-wrap: wrap; /* Permet aux éléments de s'enrouler sur plusieurs lignes */
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 30px;
+    }
+
+    .profile-section div {
+        flex: 1; /* Permet aux éléments d'occuper un espace égal */
+        min-width: 300px; /* Largeur minimale pour chaque section */
+        margin-right: 20px; /* Espace entre les sections */
+    }
+
+    .profile-section img {
+        max-width: 100%; /* L'image ne dépassera pas la largeur de son conteneur */
+        height: auto; /* Garde les proportions de l'image */
+    }
+
+    .consultations-table {
+        margin-top: 30px;
+    }
+
+    .upload-section {
+        margin-top: 30px;
+    }
+
+    #thermal-image {
+        max-width: 100%;
+        height: auto;
+
+    }
+
+    #thermalCanvas {
+        display: none; /* Hide the canvas by default */
+    }
+
+    /* Responsiveness pour les petits écrans */
+    @media (max-width: 768px) {
+        .profile-section {
+            flex-direction: column; /* Empile les sections verticalement sur les petits écrans */
+            align-items: flex-start; /* Aligne les éléments à gauche */
+        }
+
+        .profile-section div {
+            margin-right: 0; /* Supprime l'espace à droite */
+            margin-bottom: 20px; /* Ajoute de l'espace en bas */
+        }
+
+        .upload-section, .consultations-table {
+            width: 100%; /* Assure que ces sections occupent toute la largeur */
+        }
+    }
+
+</style>
+
+</head>
+<body>
+
+    <div class="dashboard-header">
+        <h1>Bienvenue, {{ patient.first_name }} {{ patient.last_name }}</h1>
+    </div>
+
+    <div class="container">
+        <div class="profile-section">
+            <div>
+                <h2>Informations personnelles</h2>
+                <ul>
+                    <li><strong>CIN:</strong> {{ patient.cin }}</li>
+                    <li><strong>Email:</strong> {{ patient.email }}</li>
+                    <li><strong>Ville:</strong> {{ patient.ville }}</li>
+                    <li><strong>Médecin:</strong> {{ patient.medecin.username }}</li>
+                </ul>
+            </div>
+            <div>
+                <img src="{{ url_for('static', filename='uploads/photos' + patient.photo) }}" alt="Photo de profil" width="150">
+            </div>
+        </div>
+
+        <div class="consultation-online text-center mt-4">
+            <h5>Consultation en Ligne</h5>
+            <button class="btn btn-success" data-toggle="modal" data-target="#thermalImageModal">
+                <img src="{{ url_for('static', filename='icons/consultation_icon.png') }}" alt="Consultation en Ligne" width="30" style="margin-right: 10px;">
+                Démarrer la Consultation
+            </button>
+        </div>
+
+        <div class="upload-section">
+            <h5>Téléverser un document médical</h5>
+            <form action="{{ url_for('upload_file', patient_id=patient.id) }}" method="POST" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="document_type">Type de document</label>
+                    <select id="document_type" name="document_type" class="form-control">
+                        <option value="IRM">IRM</option>
+                        <option value="Scanner">Scanner</option>
+                        <option value="Ordonnance">Ordonnance</option>
+                        <option value="Analyse">Analyse</option>
+                        <option value="Autre">Autre (à spécifier)</option>
+                    </select>
+                </div>
+                <div class="form-group" id="other-type-group" style="display: none;">
+                    <label for="other-type">Spécifiez le type de document</label>
+                    <input type="text" name="other_type" id="other-type" class="form-control" placeholder="Entrez le type de document">
+                </div>
+                <div class="form-group">
+                    <label for="file">Choisir un fichier</label>
+                    <input type="file" name="file" class="form-control-file" required>
+                </div>
+                <button type="submit" class="btn btn-primary mt-2">Téléverser</button>
+            </form>
+        </div>
+
+        <script>
+            document.getElementById('document_type').addEventListener('change', function() {
+                var otherTypeGroup = document.getElementById('other-type-group');
+                if (this.value === 'Autre') {
+                    otherTypeGroup.style.display = 'block';
+                } else {
+                    otherTypeGroup.style.display = 'none';
+                }
+            });
+        </script>
+
+        <div class="consultations-table">
+            <h2>Mes Consultations</h2>
+            <table class="table table-bordered table-striped">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>Type</th>
+                        <th>Date</th>
+                        <th>Document</th>
+                        <th>Commentaires</th>
+                    </tr>
+                </thead>
+
+               <tbody>
+    {% for diagnostic in patient.diagnostics %}
+    <tr>
+        <td>{{ diagnostic.type if diagnostic.type != 'Autre' else other_type }}</td>
+        <td>{{ diagnostic.date.strftime('%d/%m/%Y %H:%M') }}</td>
+   <td>
+                            {% if diagnostic.file.endswith('.mp4') or diagnostic.file.endswith('.webm') %}
+                                <a href="#" data-toggle="modal" data-target="#videoModal" onclick="setVideoSource('{{ url_for('static', filename='uploads/videos/' + diagnostic.file) }}')">Voir la vidéo</a>
+                            {% else %}
+                                <a href="{{ url_for('static', filename='uploads/document/' + diagnostic.file) }}" target="_blank">Voir le document</a>
+                            {% endif %}
+                        </td>
+        <td>
+            {% if diagnostic.commentaires %}
+                {% for comment in diagnostic.commentaires %}
+                    <div>
+                        <strong>Dr {{ comment.medecin.first_name }} {{ comment.medecin.last_name }}:</strong> {{ comment.text }} <br>
+                        <em>(le {{ comment.date_creation.strftime('%d/%m/%Y %H:%M') }})</em>
+                        {% if comment.file %}
+                            <a href="{{ url_for('static', filename='uploads/document' + comment.file) }}" target="_blank">Voir le fichier joint</a>
+                        {% endif %}
+                        {% if comment.reponses %}
+                            <div style="margin-left: 20px; border-left: 2px solid #007bff; padding-left: 10px;">
+                                {% for reponse in comment.reponses %}
+                                <strong>Réponses du Patient. {{ reponse.patient.first_name }} {{ reponse.patient.last_name }} :</strong>
+                                   <p><em>{{ reponse.contenu }}</em> (le {{ reponse.date_creation.strftime('%d/%m/%Y %H:%M') }})</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <form action="{{ url_for('repondre_commentaire', commentaire_id=comment.id) }}" method="POST">
+                            <div class="form-group mt-2">
+                                <textarea name="contenu" class="form-control" rows="2" placeholder="Votre réponse..." required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-secondary">Répondre</button>
+                        </form>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div>Aucun commentaire disponible.</div>
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+</tbody>
+
+            </table>
+        </div>
+
+        <!-- Modal pour l'image thermique -->
+<div class="modal fade" id="thermalImageModal" tabindex="-1" aria-labelledby="thermalImageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="thermalImageModalLabel">Image Thermique</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="thermal-image" class="img-fluid" src="/thermal_image?patient_id={{ patient.id }}" alt="Thermal Image" style="max-width: 100%; height: auto;">
+                <canvas id="thermalCanvas" class="w-100 mt-3"></canvas> <!-- Le canvas est mis en pleine largeur avec un espace en haut -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
+                <button id="start-recording" class="btn btn-primary">Démarrer l'enregistrement</button>
+                <button id="stop-recording" class="btn btn-danger" disabled>Arrêter l'enregistrement</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour la vidéo -->
+<div class="modal fade" id="videoModal" tabindex="-1" aria-labelledby="videoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="videoModalLabel">Visionner la Vidéo</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body text-center">
+                <video id="videoPlayer" class="w-100" controls style="max-width: 100%; height: auto;">
+                    <source id="videoSource" src="" type="video/mp4">
+                    Votre navigateur ne prend pas en charge la lecture des vidéos.
+                </video>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const patientId = "{{ patient.id }}"; // Utiliser l'ID du patient authentifié
+    const img = document.getElementById('thermal-image');
+    const canvas = document.getElementById('thermalCanvas');
+    const ctx = canvas.getContext('2d');
+    let mediaRecorder;
+    let recordedChunks = [];
+
+    // Rafraîchir l'image toutes les secondes
+    setInterval(function() {
+        img.src = `/thermal_image?patient_id=${patientId}&_=${new Date().getTime()}`;
+    }, 1000);
+
+    document.getElementById('start-recording').onclick = function() {
+        canvas.width = img.width;
+        canvas.height = img.height;
+
+        // Dessiner l'image thermique sur le canvas en continu
+        const captureInterval = setInterval(function() {
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        }, 100);
+
+        // Utiliser le canvas comme source de flux vidéo
+        const stream = canvas.captureStream(30); // 30 FPS
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+
+        // Collecter les données de la vidéo
+        mediaRecorder.ondataavailable = function(event) {
+            if (event.data.size > 0) {
+                recordedChunks.push(event.data);
+            }
+        };
+
+        // Démarrer l'enregistrement
+        mediaRecorder.start();
+
+        // Lorsque l'enregistrement est terminé
+        mediaRecorder.onstop = function() {
+            clearInterval(captureInterval);
+            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+
+            // Création d'un FormData pour téléverser la vidéo
+            let formData = new FormData();
+            formData.append('video', blob, `thermal_video_${patientId}.webm`);
+
+            fetch(`/upload_video?patient_id=${patientId}`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('Vidéo téléchargée avec succès.');
+                } else {
+                    console.error('Erreur lors du téléchargement:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+            });
+
+            recordedChunks = [];
+        };
+
+        document.getElementById('stop-recording').disabled = false;
+        this.disabled = true; // Désactiver le bouton "Démarrer"
+    };
+
+    document.getElementById('stop-recording').onclick = function() {
+        // Arrêter l'enregistrement
+        mediaRecorder.stop();
+        document.getElementById('start-recording').disabled = false;
+        this.disabled = true; // Désactiver le bouton "Arrêter"
+    };
+</script>
+
+<script>
+            function setVideoSource(source) {
+                document.getElementById('videoSource').src = source;
+                document.getElementById('videoSource').parentElement.load();
+            }
+        </script>
+
+    </div>
+        <div class="text-center">
+            <a href="{{ url_for('logout') }}" class="btn btn-danger">Déconnexion</a>
+        </div>
+    </div>
+
+   <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+ <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+<script src="https://cdn.webrtc-experiment.com/RecordRTC.js"></script>
+</body>
+</html>
