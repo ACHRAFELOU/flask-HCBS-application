@@ -3,7 +3,7 @@ import PyPDF2
 
 
 chemin_dossier = r"F:\ATTESTATIONS SALARIES DECLARES"
-mot_cle = "MAQROTE ABDELHADI "
+mot_cle = "SAOUD KARIMA"
 
 
 for nom_fichier in os.listdir(chemin_dossier):

@@ -8,7 +8,7 @@ import cv2
 from pylab import *
 
 serial_port = 'COM3'
-ser = serial.Serial(serial_port, 9600)
+ser = serial.Serial(serial_port, 115200)
 
 n = 225
 pix = [[0] * n for p in range(n)]

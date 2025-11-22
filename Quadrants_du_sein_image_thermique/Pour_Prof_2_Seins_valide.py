@@ -1,6 +1,11 @@
+import serial, time
+import csv
+import pyautogui
+import pyscreeze
+import matplotlib as plt
+import numpy as np
 import cv2
 from pylab import *
-import random
 n = 225
 pix = [[0] * n for p in range(n)]
 

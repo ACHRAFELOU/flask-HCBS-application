@@ -1,0 +1,25 @@
+# Fichiers Python
+__pycache__/
+*.pyc
+
+# Environnements virtuels
+venv/
+.env/
+
+# Bases de données locales
+*.db
+
+# Archives et fichiers lourds
+*.zip
+*.rar
+*.mp4
+*.avi
+*.mov
+*.jpg
+*.jpeg
+*.png
+
+# Projets à exclure (trop volumineux)
+Quadrants_du_sein_image_thermique/
+projects/
+Android V21.zip

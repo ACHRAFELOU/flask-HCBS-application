@@ -8,7 +8,7 @@ chemin_excel = 'C:/Users/a.elouerghi/Desktop/Etat/anrt.facture.xlsx'
 donnees_excel = pd.read_excel(chemin_excel)
 
 # Dossier contenant tes fichiers PDF
-dossier_pdf = 'C:/Users/a.elouerghi/Desktop/Etat/Récépissés du 07 au 13 Juillet 2025/'
+dossier_pdf = 'C:/Users/a.elouerghi/Desktop/Etat/Récépissés du 10 au 16 novembre 2025/'
 
 # Parcourir chaque ligne du fichier Excel
 for index, row in donnees_excel.iterrows():
