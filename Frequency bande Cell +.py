@@ -13,66 +13,77 @@ import time
 ODOO_URL = "https://mouwafaqa.anrt.ma"
 USERNAME = "a.elouerghi@anrt.ma"
 PASSWORD = "H-RAF2021@@"
-DEMANDE_ID = "120614"
+DEMANDE_ID = "119597"
 
-# Nouvelles fréquences à définir - DOUZE LIGNES avec puissances
-NOUVELLES_FREQUENCES = [
-    # Ligne 1: WiFi 2.4 GHz
-    {
+# -------------------------
+# DÉFINITION DES CHOIX DE FRÉQUENCES
+# -------------------------
+CHOIX_FREQUENCES = {
+    "1": {
+        "nom": "WiFi 2.4 GHz",
         "freq_emission_min": "2400",
         "freq_emission_max": "2483.5",
         "freq_reception_min": "2400",
         "freq_reception_max": "2483.5",
-        "puissance": "20",  # Valeur de puissance
-        "unite_puissance": "dBm"  # Unité de puissance
+        "puissance": "20",
+        "unite_puissance": "dBm"
     },
-    # Ligne 2: Bluetooth 2.4 GHz
-    {
+    "2": {
+        "nom": "Bluetooth",
         "freq_emission_min": "2400",
         "freq_emission_max": "2483.5",
         "freq_reception_min": "2400",
         "freq_reception_max": "2483.5",
-        "puissance": "13",  # Valeur de puissance
-        "unite_puissance": "dBm"  # Unité de puissance
+        "puissance": "20",
+        "unite_puissance": "dBm"
     },
-    # Ligne 3: WiFi 5 GHz
-    {
+    "3": {
+        "nom": "Bluetooth LE",
+        "freq_emission_min": "2400",
+        "freq_emission_max": "2483.5",
+        "freq_reception_min": "2400",
+        "freq_reception_max": "2483.5",
+        "puissance": "13",
+        "unite_puissance": "dBm"
+    },
+    "4": {
+        "nom": "WiFi 5GHz",
         "freq_emission_min": "5150",
         "freq_emission_max": "5350",
         "freq_reception_min": "5150",
         "freq_reception_max": "5350",
-        "puissance": "23",  # Valeur de puissance
-        "unite_puissance": "dBm"  # Unité de puissance
+        "puissance": "23",
+        "unite_puissance": "dBm"
     },
-    # Ligne 4: WiFi 6E
-    {
+    "5": {
+        "nom": "WiFi 6E",
         "freq_emission_min": "5925",
         "freq_emission_max": "6425",
         "freq_reception_min": "5925",
         "freq_reception_max": "6425",
-        "puissance": "23",  # Valeur de puissance
-        "unite_puissance": "dBm"  # Unité de puissance
+        "puissance": "23",
+        "unite_puissance": "dBm"
     },
-    # Ligne 5: RFID
-    {
+    "6": {
+        "nom": "RFID",
         "freq_emission_min": "13.56",
         "freq_emission_max": "13.56",
         "freq_reception_min": "13.56",
         "freq_reception_max": "13.56",
-        "puissance": "60",  # Valeur de puissance
-        "unite_puissance": "dBm"  # Unité de puissance
+        "puissance": "60",
+        "unite_puissance": "dBm"
     },
-    # Ligne 6: GSM 900 (Puissance 33 dBm)
-    {
+    "7a": {
+        "nom": "GSM 900",
         "freq_emission_min": "880",
         "freq_emission_max": "915",
         "freq_reception_min": "925",
         "freq_reception_max": "960",
-        "puissance": "33.0",  # Valeur de puissance
-        "unite_puissance": "W"  # Unité de puissance
+        "puissance": "33.0",
+        "unite_puissance": "W"
     },
-    # Ligne 7: GSM 1800 (Puissance 30 dBm)
-    {
+    "7b": {
+        "nom": "GSM 1800",
         "freq_emission_min": "1710",
         "freq_emission_max": "1785",
         "freq_reception_min": "1805",
@@ -80,8 +91,8 @@ NOUVELLES_FREQUENCES = [
         "puissance": "30.0",
         "unite_puissance": "W"
     },
-    # Ligne 8: LTE 800 (Puissance 23 dBm)
-    {
+    "8a": {
+        "nom": "LTE 800",
         "freq_emission_min": "832",
         "freq_emission_max": "862",
         "freq_reception_min": "791",
@@ -89,8 +100,8 @@ NOUVELLES_FREQUENCES = [
         "puissance": "23.0",
         "unite_puissance": "W"
     },
-    # Ligne 9: LTE 1800 (Puissance 23 dBm)
-    {
+    "8b": {
+        "nom": "LTE 1800",
         "freq_emission_min": "1710",
         "freq_emission_max": "1785",
         "freq_reception_min": "1805",
@@ -98,8 +109,8 @@ NOUVELLES_FREQUENCES = [
         "puissance": "23.0",
         "unite_puissance": "W"
     },
-    # Ligne 10: LTE 2600 (Puissance 23 dBm)
-    {
+    "8c": {
+        "nom": "LTE 2600",
         "freq_emission_min": "2500",
         "freq_emission_max": "2570",
         "freq_reception_min": "2620",
@@ -107,8 +118,8 @@ NOUVELLES_FREQUENCES = [
         "puissance": "23.0",
         "unite_puissance": "W"
     },
-    # Ligne 11: UMTS 900 (Puissance 24 dBm)
-    {
+    "9a": {
+        "nom": "UMTS 900",
         "freq_emission_min": "880",
         "freq_emission_max": "915",
         "freq_reception_min": "925",
@@ -116,8 +127,8 @@ NOUVELLES_FREQUENCES = [
         "puissance": "24.0",
         "unite_puissance": "W"
     },
-    # Ligne 12: UMTS 2100 (Puissance 24 dBm)
-    {
+    "9b": {
+        "nom": "UMTS 2100",
         "freq_emission_min": "1920",
         "freq_emission_max": "1980",
         "freq_reception_min": "2110",
@@ -125,12 +136,104 @@ NOUVELLES_FREQUENCES = [
         "puissance": "24.0",
         "unite_puissance": "W"
     }
-]
+}
+
+# Variable globale pour stocker les fréquences sélectionnées
+NOUVELLES_FREQUENCES = []
 
 
 # -------------------------
 # FONCTIONS UTILITAIRES
 # -------------------------
+def selectionner_frequences():
+    """Permet à l'utilisateur de sélectionner les fréquences à ajouter"""
+    global NOUVELLES_FREQUENCES
+
+    print("=" * 60)
+    print("SÉLECTION DES FRÉQUENCES À AJOUTER")
+    print("=" * 60)
+    print("\nVoici les options disponibles :")
+    print("-" * 60)
+
+    # Afficher le menu
+    print("1. WiFi 2.4 GHz")
+    print("2. Bluetooth")
+    print("3. Bluetooth LE")
+    print("4. WiFi 5GHz")
+    print("5. WiFi 6E")
+    print("6. RFID")
+    print("7. GSM (deux bandes : 7a=GSM 900, 7b=GSM 1800)")
+    print("8. LTE (trois bandes : 8a=LTE 800, 8b=LTE 1800, 8c=LTE 2600)")
+    print("9. UMTS (deux bandes : 9a=UMTS 900, 9b=UMTS 2100)")
+    print("-" * 60)
+
+    while True:
+        choix = input("\nEntrez vos choix (ex: 1,4,6 ou 7 ou 8 ou 9) : ").strip()
+
+        if not choix:
+            print("❌ Veuillez entrer au moins un choix")
+            continue
+
+        # Nettoyer et séparer les choix
+        choix_liste = [c.strip() for c in choix.split(',')]
+        frequences_selectionnees = []
+
+        # Traiter chaque choix
+        for choix_item in choix_liste:
+            # Cas des choix multiples
+            if choix_item == "7":
+                # Ajouter les deux bandes GSM
+                frequences_selectionnees.append(CHOIX_FREQUENCES["7a"])
+                frequences_selectionnees.append(CHOIX_FREQUENCES["7b"])
+            elif choix_item == "8":
+                # Ajouter les trois bandes LTE
+                frequences_selectionnees.append(CHOIX_FREQUENCES["8a"])
+                frequences_selectionnees.append(CHOIX_FREQUENCES["8b"])
+                frequences_selectionnees.append(CHOIX_FREQUENCES["8c"])
+            elif choix_item == "9":
+                # Ajouter les deux bandes UMTS
+                frequences_selectionnees.append(CHOIX_FREQUENCES["9a"])
+                frequences_selectionnees.append(CHOIX_FREQUENCES["9b"])
+            elif choix_item in CHOIX_FREQUENCES:
+                # Ajouter le choix spécifique
+                frequences_selectionnees.append(CHOIX_FREQUENCES[choix_item])
+            else:
+                print(f"⚠️ Choix '{choix_item}' non reconnu, ignoré")
+
+        if not frequences_selectionnees:
+            print("❌ Aucune fréquence valide sélectionnée. Veuillez réessayer.")
+            continue
+
+        # Afficher le récapitulatif
+        print(f"\n{'=' * 60}")
+        print(f"RÉCAPITULATIF DES {len(frequences_selectionnees)} FRÉQUENCE(S) SÉLECTIONNÉE(S)")
+        print(f"{'=' * 60}")
+
+        for i, freq in enumerate(frequences_selectionnees):
+            nom = freq['nom']
+            emission = f"{freq['freq_emission_min']}-{freq['freq_emission_max']}" if freq['freq_emission_min'] != freq[
+                'freq_emission_max'] else freq['freq_emission_min']
+            reception = f"{freq['freq_reception_min']}-{freq['freq_reception_max']}" if freq['freq_reception_min'] != \
+                                                                                        freq['freq_reception_max'] else \
+            freq['freq_reception_min']
+            puissance = f"{freq['puissance']} {freq['unite_puissance']}"
+
+            print(
+                f"{i + 1:2d}. {nom:15} | Émission: {emission:15} MHz | Réception: {reception:15} MHz | Puissance: {puissance}")
+
+        print(f"{'=' * 60}")
+
+        confirmation = input("\nConfirmez-vous ces choix ? (O/N) : ").strip().upper()
+
+        if confirmation == 'O' or confirmation == 'OUI' or confirmation == '':
+            NOUVELLES_FREQUENCES = frequences_selectionnees
+            print(f"\n✅ {len(NOUVELLES_FREQUENCES)} fréquence(s) sélectionnée(s)")
+            return True
+        else:
+            print("\n🔄 Nouvelle sélection...")
+            continue
+
+
 def setup_browser():
     chrome_options = Options()
     chrome_options.add_argument("--start-maximized")
@@ -469,34 +572,34 @@ def modify_power_field(driver, line_index, puissance_value, unite_puissance):
         js_find_power = """
             var lineIndex = arguments[0];
             var newPower = arguments[1];
-            
+
             // Chercher tous les champs puissance
             var powerFields = [];
             var allElements = document.querySelectorAll('*[name*="potencia"], *[class*="potencia"], span.o_field_char');
-            
+
             for(var elem of allElements) {
                 var name = elem.getAttribute('name') || '';
                 var className = elem.className || '';
                 var text = elem.textContent || '';
-                
+
                 if(name.includes('potencia') || className.includes('potencia') || 
                    (elem.tagName === 'SPAN' && elem.classList.contains('o_field_char') && text.match(/\\d+\\.\\d+/))) {
                     powerFields.push(elem);
                 }
             }
-            
+
             // Sélectionner le bon champ selon l'index de ligne
             if(lineIndex < powerFields.length) {
                 var field = powerFields[lineIndex];
                 field.textContent = newPower;
-                
+
                 // Déclencher les événements
                 field.dispatchEvent(new Event('input', { bubbles: true }));
                 field.dispatchEvent(new Event('change', { bubbles: true }));
-                
+
                 return true;
             }
-            
+
             return false;
         """
 
@@ -510,7 +613,7 @@ def modify_power_field(driver, line_index, puissance_value, unite_puissance):
         try:
             # Chercher près des labels "Puissance" ou "Potencia"
             power_labels = driver.find_elements(By.XPATH,
-                "//label[contains(text(), 'Puissance') or contains(text(), 'Potencia') or contains(text(), 'Power')]")
+                                                "//label[contains(text(), 'Puissance') or contains(text(), 'Potencia') or contains(text(), 'Power')]")
 
             for label in power_labels:
                 if label.is_displayed():
@@ -575,6 +678,7 @@ def modify_frequency_fields_with_pauses(driver):
             print(f"\n{'=' * 60}")
             print(f"📝 LIGNE {line_index + 1}/{len(NOUVELLES_FREQUENCES)}")
             print(f"{'=' * 60}")
+            print(f"    Nom: {freq_set['nom']}")
             print(f"    Émission: {freq_set['freq_emission_min']} - {freq_set['freq_emission_max']} MHz")
             print(f"    Réception: {freq_set['freq_reception_min']} - {freq_set['freq_reception_max']} MHz")
             print(f"    Puissance: {freq_set['puissance']} {freq_set['unite_puissance']}")
@@ -732,10 +836,9 @@ def modify_frequency_fields_with_pauses(driver):
             # Résumé de la ligne
             if line_modified > 0:
                 print(f"\n    ✅ Ligne {line_index + 1}: {line_modified}/5 champs modifiés")
-                print(f"      - Fréquences: {freq_set['freq_emission_min']}-{freq_set['freq_emission_max']}/{freq_set['freq_reception_min']}-{freq_set['freq_reception_max']} MHz")
+                print(
+                    f"      - Fréquences: {freq_set['freq_emission_min']}-{freq_set['freq_emission_max']}/{freq_set['freq_reception_min']}-{freq_set['freq_reception_max']} MHz")
                 print(f"      - Puissance: {freq_set['puissance']} {freq_set['unite_puissance']}")
-
-                # Prendre une capture d'écran de cette ligne
 
                 # Pause interactive pour sauvegarde manuelle (sauf pour la dernière ligne)
                 if line_index < len(NOUVELLES_FREQUENCES) - 1:
@@ -841,12 +944,6 @@ def main_workflow(driver):
     print(f"Configuration de {len(NOUVELLES_FREQUENCES)} ligne(s) de fréquences:")
     print("=" * 60)
 
-
-    band_names = [
-        "WiFi 2.4 GHz", "Bluetooth", "WiFi 5 GHz", "WiFi 6E", "RFID",
-        "GSM 900", "GSM 1800", "LTE 800", "LTE 1800", "LTE 2600", "UMTS 900", "UMTS 2100"
-    ]
-
     for i, freq_set in enumerate(NOUVELLES_FREQUENCES):
         # Formater les fréquences
         if freq_set['freq_emission_min'] == freq_set['freq_emission_max']:
@@ -859,11 +956,10 @@ def main_workflow(driver):
         else:
             reception = f"{freq_set['freq_reception_min']}-{freq_set['freq_reception_max']}"
 
-        band_type = band_names[i] if i < len(band_names) else f"Ligne {i+1}"
+        nom = freq_set['nom']
         puissance = f"{freq_set['puissance']} {freq_set['unite_puissance']}"
 
-        print(f"│ {i + 1:4d} │ {emission:31} │ {reception:31} │ {band_type:12} │ {puissance:11} │")
-
+        print(f"│ {i + 1:4d} │ {nom:15} │ {emission:31} │ {reception:31} │ {puissance:11} │")
 
     print("=" * 60)
 
@@ -888,12 +984,25 @@ def main_workflow(driver):
 
     return True
 
+
 # -------------------------
 # MAIN
 # -------------------------
 def main():
-
     print("=" * 60)
+    print("SCRIPT DE MODIFICATION DES FRÉQUENCES RADIO")
+    print("=" * 60)
+
+    # 1. Sélectionner les fréquences
+    if not selectionner_frequences():
+        print("❌ Aucune fréquence sélectionnée")
+        return
+
+    if not NOUVELLES_FREQUENCES:
+        print("❌ Aucune fréquence à modifier")
+        return
+
+    print(f"\n🎯 {len(NOUVELLES_FREQUENCES)} fréquence(s) sélectionnée(s) pour modification")
 
     driver = setup_browser()
 
@@ -915,10 +1024,9 @@ def main():
             print("\n" + "=" * 60)
             print("🎉 MODIFICATION DES FRÉQUENCES ET PUISSANCES TERMINÉE AVEC SUCCÈS!")
             print("=" * 60)
-            print("📋 RÉCAPITULATIF COMPLET (12 lignes):")
+            print("📋 RÉCAPITULATIF COMPLET :")
             for i, freq_set in enumerate(NOUVELLES_FREQUENCES):
-                band_name = band_names[i] if i < len(band_names) else f"Ligne {i+1}"
-                print(f"  {band_name}:")
+                print(f"  {freq_set['nom']}:")
                 print(f"    Émission: {freq_set['freq_emission_min']}-{freq_set['freq_emission_max']} MHz")
                 print(f"    Réception: {freq_set['freq_reception_min']}-{freq_set['freq_reception_max']} MHz")
                 print(f"    Puissance: {freq_set['puissance']} {freq_set['unite_puissance']}")
