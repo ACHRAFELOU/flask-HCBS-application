@@ -13,7 +13,7 @@ import time
 ODOO_URL = "https://mouwafaqa.anrt.ma"
 USERNAME = "a.elouerghi@anrt.ma"
 PASSWORD = "H-RAF2021@@"
-DEMANDE_ID = "119597"
+DEMANDE_ID = "120777"
 
 # -------------------------
 # DÉFINITION DES CHOIX DE FRÉQUENCES
