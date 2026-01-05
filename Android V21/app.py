@@ -1,6 +1,7 @@
 import eventlet
 eventlet.monkey_patch()
-
+from scipy.ndimage import gaussian_filter, binary_opening, binary_closing
+from scipy.interpolate import griddata
 import os
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -20,6 +21,11 @@ import json
 import serial.tools.list_ports
 from flask_socketio import SocketIO, emit
 # Initialisation de la base de données et de Flask-Login
+screen_width = 1800
+screen_height = 980
+bg_color = 245
+nb_sections = 10
+img_base = np.full((screen_height, screen_width, 3), bg_color, np.uint8)
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
@@ -85,7 +91,7 @@ def register_patient():
             return redirect(url_for('register_patient'))
 
         # Sauvegarder la photo
-        photo_filename = secure_filename(f"{username}.jpg")
+        photo_filename = secure_filename(f"{username}.png")
         photo.save(os.path.join(app.config['UPLOAD_FOLDER'], photo_filename))
 
         # Créer le patient
@@ -238,7 +244,7 @@ def dashboard_patient():
     if not patient_id:
         return redirect(url_for('login_patient'))  # Rediriger vers la page de connexion si non connecté
 
-    patient = Patient.query.get(patient_id)
+    patient = db.session.get(Patient, patient_id)
     # Récupérer les diagnostics pour le patient
     patient.diagnostics = Diagnostic.query.filter_by(patient_id=patient_id).all()
     # Récupérer les commentaires associés au patient
@@ -364,19 +370,7 @@ def repondre_commentaire(commentaire_id):
 #################################Consultation En ligne#############################
 
 
-# Paramètres globaux
-n = 128
-sensor_values = [[0] * n for p in range(n)]
-r = [[0] * n for p in range(n)]
-g = [[0] * n for p in range(n)]
-b = [[0] * n for p in range(n)]
-
-minimum = 18
-maximum = 28
-img = np.zeros((800, 1700, 3), np.uint8)
-img[:] = (240, 180, 203)
-
-import serial.tools.list_ports
+# # Paramètres globaux
 
 @app.route('/available_ports', methods=['GET'])
 def available_ports():
@@ -434,493 +428,915 @@ def rgb(minimum, maximum, value):
 def close_serial_connection(ser):
     if ser and ser.is_open:
         ser.close()
+max_radius = min(screen_width, screen_height) // 4
+centre_gauche = (800, screen_height // 2 + 20)
+centre_droit = (1500, screen_height // 2 + 20)
+lissage_sigma = 1.2
+rayons = [max_radius - i * max(1, (max_radius // 18)) for i in range(18)]
+
+# Lire ligne série et convertir en flottants
+
+# -------------------- Utilitaires --------------------
+def extend_to_length(values, length):
+    return [values[i % len(values)] for i in range(length)]
+def compute_grid(centre, rayons, nb_sections, valeurs, grid_res=360):
+    points, vals = [], []
+    pas = 90.0 / max(1, nb_sections)
+    for q in range(4):
+        for idx, r in enumerate(rayons):
+            temp_vals = extend_to_length(valeurs[q][idx], nb_sections)
+            temp_vals = temp_vals[::-1]
+            for i in range(nb_sections):
+                angle = q * 90 + (i + 0.5) * pas
+                x = centre[0] + r * np.cos(np.radians(angle))
+                y = centre[1] + r * np.sin(np.radians(angle))
+                points.append([x, y])
+                vals.append(temp_vals[i % len(temp_vals)])
+    points = np.array(points)
+    vals = np.array(vals)
+
+    max_r = max(rayons)
+    grid_x, grid_y = np.mgrid[centre[0] - max_r:centre[0] + max_r:complex(grid_res),
+                     centre[1] - max_r:centre[1] + max_r:complex(grid_res)]
+    try:
+        grid_z = griddata(points, vals, (grid_x, grid_y), method='linear')
+    except Exception:
+        grid_z = np.full(grid_x.shape, np.nan)
+    mask = np.sqrt((grid_x - centre[0]) ** 2 + (grid_y - centre[1]) ** 2) <= max_r
+    grid_z[~mask] = np.nan
+    return grid_x, grid_y, grid_z, mask
+
+def render_heatmap_on_image(img, centre, grid_x, grid_y, grid_z, mask, tmin, seuil_chaud_init, gamma=0.1):
+    grid_z_filled = np.nan_to_num(grid_z, nan=tmin)
+    grid_z_smooth = gaussian_filter(grid_z_filled, sigma=lissage_sigma)
+
+    # Normalisation par rapport au seuil chaud
+    denom = max(1e-6, (seuil_chaud_init - tmin))
+    grid_norm = np.clip((grid_z_smooth - tmin) / denom, 0, 1)
+    grid_norm = (grid_norm ** gamma * 255).astype(np.uint8)
+
+    # Appliquer colormap
+    heatmap = cv2.applyColorMap(grid_norm, cv2.COLORMAP_JET)
+
+    # Masque et ROI
+    max_r = max(rayons)
+    x0 = max(0, centre[0] - max_r)
+    y0 = max(0, centre[1] - max_r)
+    x1 = min(screen_width, centre[0] + max_r)
+    y1 = min(screen_height, centre[1] + max_r)
+    w, h = x1 - x0, y1 - y0
+
+    heatmap_resized = cv2.resize(heatmap, (w, h), interpolation=cv2.INTER_CUBIC)
+    mask_resized = cv2.resize(mask.astype(np.uint8), (w, h), interpolation=cv2.INTER_NEAREST).astype(bool)
+    roi = img[y0:y1, x0:x1]
+    np.copyto(roi, heatmap_resized, where=np.dstack([mask_resized]*3))
+    img[y0:y1, x0:x1] = roi
+
+    return grid_z_smooth, mask_resized, (x0, y0, w, h)
+
+
+def detect_hot_zones_and_smooth(grid_z, mask, seuil):
+    valid = ~np.isnan(grid_z)
+    chaud = np.zeros_like(grid_z, dtype=bool)
+    chaud[valid] = grid_z[valid] > seuil
+    chaud_clean = binary_opening(chaud, structure=np.ones((3, 3)))
+    chaud_clean = binary_closing(chaud_clean, structure=np.ones((5, 5)))
+    valid_count = np.count_nonzero(valid)
+    pct = (np.count_nonzero(chaud_clean) / valid_count * 100.0) if valid_count else 0.0
+    return chaud_clean, pct
+
+def draw_contours_and_boxes(img, centre, bool_mask, grid_z, offset_info=None, couleur=(0, 0, 255)):
+    if offset_info is None:
+        return []
+    x0, y0, w, h = offset_info
+    mask_uint = (bool_mask.astype(np.uint8) * 255)
+    contours, _ = cv2.findContours(mask_uint, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    annotations = []
+    gh, gw = mask_uint.shape
+    sx = w / max(1, gw)
+    sy = h / max(1, gh)
+
+    for c in contours:
+        if cv2.contourArea(c) < 10:
+            continue
+        x, y, cw, ch = cv2.boundingRect(c)
+        area_pixels = cv2.contourArea(c)
+        total_valid = np.count_nonzero(~np.isnan(grid_z))
+        pct_area = (area_pixels / total_valid * 100) if total_valid else 0.0
+        poly = c.squeeze().astype(np.float32)
+        if poly.ndim == 1:
+            continue
+        poly[:, 0] = poly[:, 0] * sx + x0
+        poly[:, 1] = poly[:, 1] * sy + y0
+        pts = poly.reshape((-1, 1, 2)).astype(np.int32)
+        cv2.polylines(img, [pts], True, couleur, 2, cv2.LINE_AA)
+        M = cv2.moments(c)
+        if M['m00'] != 0:
+            cxg = int(M['m10'] / M['m00']);
+            cyg = int(M['m01'] / M['m00'])
+            cx = int(cxg * sx + x0);
+            cy = int(cyg * sy + y0)
+        else:
+            cx = int(np.mean(poly[:, 0]));
+            cy = int(np.mean(poly[:, 1]))
+        # label = f"{pct_area:.1f}%"
+        # (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+        # cv2.rectangle(img, (cx - tw // 2 - 6, cy - th - 10), (cx + tw // 2 + 6, cy + 4), (255, 255, 255), -1)
+        # cv2.putText(img, label, (cx - tw // 2, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (10, 10, 10), 1, cv2.LINE_AA)
+        annotations.append((cx, cy, pct_area))
+    return annotations
+
+def detecter_zones_asymetrie(grid_g, grid_d, seuil_asym=0.5):
+    """Détecte les zones où la différence entre les seins dépasse le seuil"""
+    diff_grid = np.abs(grid_g - grid_d)
+    zones_asym = np.zeros_like(diff_grid, dtype=bool)
+    zones_asym[~np.isnan(diff_grid)] = diff_grid[~np.isnan(diff_grid)] > seuil_asym
+    return zones_asym
+
+def dessiner_contours_asymetrie(img, centre, bool_mask, grid_z, offset_info=None, couleur=(0, 255, 255)):
+    """Dessine des contours autour des zones d'asymétrie"""
+    if offset_info is None:
+        return 0
+    x0, y0, w, h = offset_info
+    mask_uint = (bool_mask.astype(np.uint8) * 255)
+    contours, _ = cv2.findContours(mask_uint, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    gh, gw = mask_uint.shape
+    sx = w / max(1, gw)
+    sy = h / max(1, gh)
+
+    for c in contours:
+        if cv2.contourArea(c) < 5:  # Seuil plus bas pour les petites zones
+            continue
+        poly = c.squeeze().astype(np.float32)
+        if poly.ndim == 1:
+            continue
+        poly[:, 0] = poly[:, 0] * sx + x0
+        poly[:, 1] = poly[:, 1] * sy + y0
+        pts = poly.reshape((-1, 1, 2)).astype(np.int32)
+        # Dessiner en pointillé pour différencier des zones chaudes
+        cv2.polylines(img, [pts], True, couleur, 2, cv2.LINE_AA, shift=0)
+
+        # Ajouter un label "Asym"
+        M = cv2.moments(c)
+        if M['m00'] != 0:
+            cxg = int(M['m10'] / M['m00'])
+            cyg = int(M['m01'] / M['m00'])
+            cx = int(cxg * sx + x0)
+            cy = int(cyg * sy + y0)
+            label = "Asym"
+            (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+            cv2.rectangle(img, (cx - tw // 2 - 4, cy - th - 8), (cx + tw // 2 + 4, cy + 4), (255, 255, 255), -1)
+            cv2.putText(img, label, (cx - tw // 2, cy), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 100, 100), 1, cv2.LINE_AA)
+
+    return len(contours)
+
+def grid_value_at_pixel(grid_z, centre, px, py):
+    max_r = max(rayons)
+    gx = grid_z.shape[1]
+    gy = grid_z.shape[0]
+    xi = int((px - (centre[0] - max_r)) / (2 * max_r) * gx)
+    yi = int((py - (centre[1] - max_r)) / (2 * max_r) * gy)
+    xi = np.clip(xi, 0, gx - 1)
+    yi = np.clip(yi, 0, gy - 1)
+    val = grid_z[yi, xi]
+    return None if np.isnan(val) else float(val)
+
+
+# -------------------- Fenêtre et trackbars --------------------
+class ThermalImager:
+    def __init__(self, screen_width, screen_height):
+        self.win_name = "Thermo IA - Clinique (o = toggle overlay)"
+        self.screen_width = screen_width
+        self.screen_height = screen_height
+        self.initialized = False
+
+    def init_window(self):
+        """Initialise la fenêtre et les trackbars si ce n'est pas déjà fait"""
+        if not self.initialized:
+            cv2.namedWindow(self.win_name, cv2.WINDOW_NORMAL)
+            cv2.resizeWindow(self.win_name, self.screen_width, self.screen_height)
+
+            # Trackbars
+            cv2.createTrackbar("Tmin x10", self.win_name, 180, 500, lambda v: None)
+            cv2.createTrackbar("Tmax x10", self.win_name, 350, 500, lambda v: None)
+            cv2.createTrackbar("Seuil chaud x10", self.win_name, 300, 500, lambda v: None)
+            cv2.createTrackbar("Gamma x10", self.win_name, 1, 30, lambda v: None)
+
+            self.initialized = True
+
+    def get_trackbar_values(self):
+        """Récupère les valeurs actuelles des trackbars"""
+        tmin = cv2.getTrackbarPos("Tmin x10", self.win_name) / 10.0
+        tmax = cv2.getTrackbarPos("Tmax x10", self.win_name) / 10.0
+        seuil = cv2.getTrackbarPos("Seuil chaud x10", self.win_name) / 10.0
+        gamma = max(0.5, cv2.getTrackbarPos("Gamma x10", self.win_name) / 10.0)
+        if tmax <= tmin + 0.1:
+            tmax = tmin + 0.1
+        return tmin, tmax, seuil, gamma
+
+    def show_image(self, img):
+        """Affiche l'image dans la fenêtre"""
+        cv2.imshow(self.win_name, img)
+
+    def set_trackbar_positions(self, tmin=None, tmax=None, seuil=None, gamma=None):
+        """Met à jour les trackbars si des valeurs sont fournies"""
+        if tmin is not None:
+            cv2.setTrackbarPos("Tmin x10", self.win_name, int(tmin * 10))
+        if tmax is not None:
+            cv2.setTrackbarPos("Tmax x10", self.win_name, int(tmax * 10))
+        if seuil is not None:
+            cv2.setTrackbarPos("Seuil chaud x10", self.win_name, int(seuil * 10))
+        if gamma is not None:
+            cv2.setTrackbarPos("Gamma x10", self.win_name, int(gamma * 10))
+# thermal_imager = ThermalImager(screen_width=1200, screen_height=700)
+# thermal_imager.init_window()
+
+
+last_grids = {'gauche': None, 'droit': None}
+param_images = {}
+overlay_on = False
+last_save_time = 0
+
+# -------------------- Dessin overlay anatomique --------------------
+def draw_anatomical_overlay(img, centre, radius, alpha=0.22, color=(220, 220, 220)):
+    overlay = img.copy()
+    axes = (int(radius * 0.95), int(radius * 0.78))
+    cv2.ellipse(overlay, centre, axes, 0, 0, 360, color, -1)
+    cv2.line(overlay, (centre[0], centre[1] - axes[1]), (centre[0], centre[1] + axes[1]), (200, 200, 200), 1)
+    cv2.line(overlay, (centre[0] - axes[0], centre[1]), (centre[0] + axes[0], centre[1]), (200, 200, 200), 1)
+    cv2.addWeighted(overlay, alpha, img, 1 - alpha, 0, img)
+
+# -------------------- Mouse callback --------------------
+zoom_states = [None, None]  # Contiendra les deux crops zoomés
+zoom_window_names = ["Zoom 1", "Zoom 2"]
+
+def on_mouse(event, x, y, flags, param):
+    global zoom_states
+
+    img_for_zoom = param_images.get('img_clean_for_zoom', None)
+    if img_for_zoom is None:
+        return
+
+    # Taille du crop autour du clic
+    w = int(max_radius * 1.0)
+    h = int(max_radius * 1.0)
+
+    # Fonction pour créer le zoom
+    def create_zoom(x, y):
+        x0 = int(np.clip(x - w // 2, 0, screen_width - w))
+        y0 = int(np.clip(y - h // 2, 0, screen_height - h))
+        crop = img_for_zoom[y0:y0 + h, x0:x0 + w].copy()
+        crop_zoomed = cv2.resize(crop, (int(w * 2.2), int(h * 2.2)), interpolation=cv2.INTER_CUBIC)
+        return crop_zoomed
+
+    if event == cv2.EVENT_LBUTTONDOWN:
+        # Vérifie clic sur sein droit
+        if (x - centre_droit[0])**2 + (y - centre_droit[1])**2 <= max_radius**2:
+            zoom_states[0] = create_zoom(x, y)
+            window_name = "Zoom du sein droit"
+            #cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+            cv2.resizeWindow(window_name, 400, 400)  # Taille plus petite
+            cv2.setWindowProperty(window_name, cv2.WND_PROP_TOPMOST, 1)
+         #   cv2.imshow(window_name, zoom_states[0])
+
+        # Vérifie clic sur sein gauche
+        elif (x - centre_gauche[0])**2 + (y - centre_gauche[1])**2 <= max_radius**2:
+            zoom_states[1] = create_zoom(x, y)
+            window_name = "Zoom du sein gauche"
+           # cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+            cv2.resizeWindow(window_name, 400, 400)  # Taille plus petite
+            cv2.setWindowProperty(window_name, cv2.WND_PROP_TOPMOST, 1)
+          #  cv2.imshow(window_name, zoom_states[1])
+
+    elif event == cv2.EVENT_MOUSEMOVE:
+        img_copy = param_images.get('img_for_mouse', None)
+        if img_copy is None:
+            return
+
+        display_info = None
+        for label, centre in [('gauche', centre_gauche), ('droit', centre_droit)]:
+            grd = last_grids[label]
+            if grd is None:
+                continue
+            gx, gy, gz, mask = grd
+            if (x - centre[0])**2 + (y - centre[1])**2 <= max_radius**2:
+                val = grid_value_at_pixel(gz, centre, x, y)
+                if val is not None:
+                    display_info = (label, val, x, y)
+                break
+
+        img_temp = img_copy.copy()
+        if display_info:
+            label, val, px, py = display_info
+            txt = f"{label.upper()} : {val:.2f} C"
+            tx = px + 15 if px < screen_width - 200 else px - 170
+            ty = py - 15 if py > 50 else py + 25
+            (tw, th), _ = cv2.getTextSize(txt, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)
+            cv2.rectangle(img_temp, (tx - 8, ty - th - 8), (tx + tw + 8, ty + 8), (255, 255, 255), -1)
+            cv2.putText(img_temp, txt, (tx, ty), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (10, 10, 10), 2, cv2.LINE_AA)
+
+       # cv2.imshow(win_name, img_temp)
+
+
+#cv2.setMouseCallback(win_name, on_mouse)
+
+
+# -------------------- Panneau d'information À GAUCHE --------------------
+def draw_info_panel(img, x, y, width, height,
+                    min_g, max_g, mean_g,
+                    min_d, max_d, mean_d,
+                    pct_g, pct_d, asym, seuil,
+                    nb_zones_asym_g, nb_zones_asym_d,
+                    alert=False):
+    panel = np.full((height, width, 3), bg_color, dtype=np.uint8)
+
+    border_color = (0, 0, 200) if alert else (50, 50, 150)
+    cv2.rectangle(panel, (0, 0), (width - 1, height - 1), border_color, 3)
+
+    title_y = 40
+    cv2.putText(panel, "ANALYSE THERMOGRAPHIQUE",
+                (width // 2 - 220, title_y), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0, 60, 120), 2)
+
+    cv2.line(panel, (10, title_y + 15), (width - 10, title_y + 15), (100, 100, 100), 2)
+
+    col_w = (width - 60) // 2
+    col_x = [30, 30 + col_w + 20]
+    start_y = title_y + 45
+    line_height = 30
+
+    # --- Colonne 1: Sein Gauche ---
+    current_y = start_y
+    cv2.putText(panel, "SEIN GAUCHE", (col_x[0], current_y),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 200), 2)
+    current_y += line_height
+
+    cv2.putText(panel, f"Min: {min_g:.1f}C", (col_x[0], current_y),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
+    current_y += line_height
+
+    cv2.putText(panel, f"Max: {max_g:.1f}C", (col_x[0], current_y),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
+    current_y += line_height
+
+    cv2.putText(panel, f"Moy: {mean_g:.1f}C", (col_x[0], current_y),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
+    current_y += line_height
+
+    cv2.putText(panel, f"Zone chaude: {pct_g:.1f}%", (col_x[0], current_y),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 200), 2)
+
+    bar_y = current_y + 12
+    bar_width = col_w - 20
+    bar_filled = int(bar_width * min(pct_g / 100, 1.0))
+    cv2.rectangle(panel, (col_x[0], bar_y), (col_x[0] + bar_filled, bar_y + 12), (0, 0, 255), -1)
+    cv2.rectangle(panel, (col_x[0], bar_y), (col_x[0] + bar_width, bar_y + 12), (80, 80, 80), 2)
+
+    # --- Colonne 2: Sein Droit ---
+    current_y = start_y
+    cv2.putText(panel, "SEIN DROIT", (col_x[1], current_y),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (200, 0, 0), 2)
+    current_y += line_height
+
+    cv2.putText(panel, f"Min: {min_d:.1f}C", (col_x[1], current_y),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
+    current_y += line_height
+
+    cv2.putText(panel, f"Max: {max_d:.1f}C", (col_x[1], current_y),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
+    current_y += line_height
+
+    cv2.putText(panel, f"Moy: {mean_d:.1f}C", (col_x[1], current_y),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
+    current_y += line_height
+
+    cv2.putText(panel, f"Zone chaude: {pct_d:.1f}%", (col_x[1], current_y),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (200, 0, 0), 2)
+
+    bar_y = current_y + 12
+    bar_filled = int(bar_width * min(pct_d / 100, 1.0))
+    cv2.rectangle(panel, (col_x[1], bar_y), (col_x[1] + bar_filled, bar_y + 12), (0, 0, 255), -1)
+    cv2.rectangle(panel, (col_x[1], bar_y), (col_x[1] + bar_width, bar_y + 12), (80, 80, 80), 2)
+
+    # --- Section Analyse en bas du panneau ---
+    analysis_y = start_y + line_height * 5 + 30
+
+    cv2.putText(panel, "ANALYSE GLOBALE", (width // 2 - 120, analysis_y),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 100, 0), 2)
+    analysis_y += line_height
+
+    # Afficher l'asymétrie seulement si > 0.1°C
+    if asym > 0.5:
+        cv2.putText(panel, f"Asymetrie: {asym:.2f}C", (width // 2 - 100, analysis_y),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
+    else:
+        cv2.putText(panel, "Asymetrie: < 0.1C", (width // 2 - 100, analysis_y),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 150, 0), 2)
+    analysis_y += line_height
+
+    cv2.putText(panel, f"Seuil chaud: {seuil:.1f}C", (width // 2 - 100, analysis_y),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
+    analysis_y += line_height
+
+    # Information sur les zones d'asymétrie
+    if nb_zones_asym_g > 0 or nb_zones_asym_d > 0:
+        cv2.putText(panel, f"Zones asymetriques: {nb_zones_asym_g}",
+                    (width // 2 - 120, analysis_y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 100, 100), 2)
+    else:
+        cv2.putText(panel, "Aucune zone asymetrique",
+                    (width // 2 - 100, analysis_y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 150, 0), 2)
+    analysis_y += line_height + 10
+
+    alert_y = analysis_y + 15
+    if alert:
+        cv2.putText(panel, "ALERTE - SUSPICION DETECTEE", (width // 2 - 180, alert_y),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 200), 2)
+        alert_y += line_height
+        cv2.putText(panel, "Examens complementaires requis", (width // 2 - 160, alert_y),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 0, 200), 2)
+    else:
+        cv2.putText(panel, "PROFIL THERMIQUE NORMAL", (width // 2 - 180, alert_y),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 150, 0), 2)
+        alert_y += line_height
+        cv2.putText(panel, "Symetrie thermique dans les normes", (width // 2 - 200, alert_y),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 150, 0), 2)
+
+    img[y:y + height, x:x + width] = panel
+
 
 def generate_thermal_image(patient_id, ser):
     # Fetch the patient using the new method
     patient = db.session.get(Patient, patient_id)
-    if not patient:
-        # Handle the case where the patient doesn't exist
+    if patient is None:
         raise ValueError(f"No patient found with id {patient_id}")
+
     try:
-        while True:
+        #while True:
                 # Lire une ligne du port série
-                line = ser.readline().decode('utf-8')
-                # Split la ligne en valeurs séparées par des virgules
-                line = line.split(',')
+                line = ser.readline().decode('latin1').strip()
+                # ou pour ignorer les caractères invalides
+                line = ser.readline().decode('utf-8', errors='ignore').strip()
+                values = line.split(',')
 
-                # Vérifier que nous avons au moins 32 valeurs
-                if len(line) >= 32:
-                    # Nettoyer les valeurs et les convertir en int
-                    line = [x.strip() for x in line]  # Utiliser float ici
+                if len(values) == 64:
+                    sensor_values = [float(v) for v in values]
 
-                    for i in range(32):
-                        sensor_values[i] = line[i]
-                        sensor_values[i + 32] = line[i + 32]
-                        sensor_values[i + 64] = line[i + 64]
-                        sensor_values[i + 96] = line[i + 96]
-                    for i in range(32):
-                        (r[i], g[i], b[i]) = rgb(minimum, maximum, sensor_values[i])
-                        (r[i + 32], g[i + 32], b[i + 32]) = rgb(minimum, maximum, sensor_values[i + 32])
-                        (r[i + 64], g[i + 64], b[i + 64]) = rgb(minimum, maximum, sensor_values[i + 64])
-                        (r[i + 96], g[i + 96], b[i + 96]) = rgb(minimum, maximum, sensor_values[i + 96])
+                    # RGB mapping
+                  #  for i in range(64):
+                   #     r[i], g[i], b[i] = rgb(minimum, maximum, sensor_values[i])
 
-                    print(sensor_values)
-                    # Save data in the database
+                    # Sauvegarde DB
                     new_diagnostic_record = Diagnostic(
                         patient_id=patient.id,
                         sensor_data=sensor_values
                     )
                     db.session.add(new_diagnostic_record)
-                    db.session.commit()  # N'oubliez pas de valider la transaction
+                    db.session.commit()
 
-                    print(f"Valeurs des capteurs : {sensor_values}")
                     socketio.emit('sensor_data', {'data': sensor_values})
 
                 else:
-                    print("Les données reçues ne contiennent pas assez de valeurs.")
-                time.sleep(1)
+                    print("Trame invalide :", len(values))
+
     except KeyboardInterrupt:
         print("Arrêt du programme par l'utilisateur.")
     finally:
         close_serial_connection(ser)
 
+        img = np.zeros((screen_height, screen_width, 3), np.uint8)
+        img[:] = (255, 255, 255)
+        tmin = tmin_init = min(sensor_values)
+        tmax = tmax_init = max(sensor_values)
+        seuil_chaud_init = 35
+        # Optionnel : mettre à jour les trackbars pour affichage dynamique
+        # cv2.setTrackbarPos("Tmin x10", win_name, int(tmin * 10))
+        # cv2.setTrackbarPos("Tmax x10", win_name, int(tmax * 10))
+        # cv2.setTrackbarPos("Seuil chaud x10", win_name, int(seuil_chaud_init * 10))
 
-        #############################################
-        #       Le Sein droit     #
-        #############################################
+        # --- remplir grid_data_list avec nouvelles grilles ---
+        grid_data_list = []
 
-        #############################################################
-        #                 Le 1er Quadrant Sup_droit                 #
-        #############################################################
+        IC = sensor_values
+        # ============== sein_gauche ================#
+        valeurs_BrLeft_hg = [
+            [IC[9], IC[9], IC[0], IC[0], IC[0], IC[0], IC[0], IC[0], IC[12], IC[12]],
+            [IC[9], IC[9], IC[0], IC[0], IC[0], IC[0], IC[0], IC[0], IC[12], IC[12]],
+            [IC[9], IC[9], IC[3], IC[3], IC[0], IC[0], IC[1], IC[1], IC[12], IC[12]],
+            [IC[9], IC[9], IC[3], IC[3], IC[2], IC[2], IC[1], IC[1], IC[12], IC[12]],
+            [IC[10], IC[10], IC[3], IC[3], IC[2], IC[2], IC[1], IC[1], IC[12], IC[12]],
+            [IC[10], IC[10], IC[3], IC[3], IC[2], IC[2], IC[1], IC[1], IC[12], IC[12]],
+            [IC[10], IC[10], IC[3], IC[3], IC[2], IC[2], IC[1], IC[1], IC[13], IC[13]],
+            [IC[10], IC[10], IC[5], IC[5], IC[2], IC[2], IC[6], IC[6], IC[13], IC[13]],
+            [IC[11], IC[11], IC[5], IC[5], IC[4], IC[4], IC[6], IC[6], IC[13], IC[13]],
+            [IC[11], IC[11], IC[5], IC[5], IC[4], IC[4], IC[6], IC[6], IC[13], IC[13]],
+            [IC[11], IC[11], IC[5], IC[5], IC[4], IC[4], IC[6], IC[6], IC[13], IC[13]],
+            [IC[31], IC[31], IC[31], IC[7], IC[7], IC[7], IC[7], IC[14], IC[14], IC[14]],
+            [IC[31], IC[31], IC[31], IC[7], IC[7], IC[7], IC[7], IC[14], IC[14], IC[14]],
+            [IC[31], IC[31], IC[31], IC[7], IC[7], IC[7], IC[7], IC[14], IC[14], IC[14]],
+            [IC[31], IC[31], IC[31], IC[8], IC[8], IC[8], IC[8], IC[14], IC[14], IC[14]],
+            [IC[31], IC[31], IC[31], IC[8], IC[8], IC[8], IC[8], IC[14], IC[14], IC[14]],
+            [IC[31], IC[31], IC[31], IC[8], IC[8], IC[8], IC[8], IC[14], IC[14], IC[14]],
+            [IC[31], IC[31], IC[31], IC[8], IC[8], IC[8], IC[8], IC[14], IC[14], IC[14]]
+        ]
+        valeurs_BrLeft_hd = [
+            [IC[12], IC[12], IC[18], IC[18], IC[18], IC[18], IC[18], IC[21], IC[21], IC[21]],
+            [IC[12], IC[12], IC[18], IC[18], IC[18], IC[18], IC[18], IC[21], IC[21], IC[21]],
+            [IC[12], IC[12], IC[18], IC[18], IC[18], IC[18], IC[18], IC[21], IC[21], IC[21]],
+            [IC[12], IC[12], IC[18], IC[18], IC[18], IC[18], IC[18], IC[21], IC[21], IC[21]],
+            [IC[12], IC[12], IC[18], IC[18], IC[18], IC[18], IC[18], IC[21], IC[21], IC[21]],
+            [IC[13], IC[13], IC[17], IC[17], IC[17], IC[17], IC[17], IC[20], IC[20], IC[20]],
+            [IC[13], IC[13], IC[17], IC[17], IC[17], IC[17], IC[17], IC[20], IC[20], IC[20]],
+            [IC[13], IC[13], IC[17], IC[17], IC[17], IC[17], IC[17], IC[20], IC[20], IC[20]],
+            [IC[13], IC[13], IC[17], IC[17], IC[17], IC[17], IC[17], IC[20], IC[20], IC[20]],
+            [IC[13], IC[13], IC[17], IC[17], IC[17], IC[17], IC[17], IC[20], IC[20], IC[20]],
+            [IC[14], IC[14], IC[16], IC[16], IC[16], IC[16], IC[16], IC[15], IC[15], IC[15]],
+            [IC[14], IC[14], IC[16], IC[16], IC[16], IC[16], IC[16], IC[15], IC[15], IC[15]],
+            [IC[14], IC[14], IC[16], IC[16], IC[16], IC[16], IC[16], IC[15], IC[15], IC[15]],
+            [IC[14], IC[14], IC[16], IC[16], IC[16], IC[16], IC[16], IC[15], IC[15], IC[15]],
+            [IC[14], IC[14], IC[14], IC[16], IC[16], IC[16], IC[19], IC[19], IC[19], IC[19]],
+            [IC[14], IC[14], IC[14], IC[16], IC[16], IC[16], IC[19], IC[19], IC[19], IC[19]],
+            [IC[14], IC[14], IC[14], IC[16], IC[16], IC[16], IC[19], IC[19], IC[19], IC[19]],
+            [IC[14], IC[14], IC[14], IC[19], IC[19], IC[19], IC[19], IC[19], IC[19], IC[19]]
+        ]
+        valeurs_BrLeft_bg = [
+            [IC[27], IC[27], IC[27], IC[30], IC[30], IC[30], IC[30], IC[9], IC[9], IC[9]],
+            [IC[27], IC[27], IC[27], IC[30], IC[30], IC[30], IC[30], IC[9], IC[9], IC[9]],
+            [IC[27], IC[27], IC[27], IC[30], IC[30], IC[30], IC[30], IC[9], IC[9], IC[9]],
+            [IC[27], IC[27], IC[27], IC[30], IC[30], IC[30], IC[30], IC[9], IC[9], IC[9]],
+            [IC[27], IC[27], IC[27], IC[30], IC[30], IC[30], IC[30], IC[9], IC[9], IC[9]],
+            [IC[27], IC[27], IC[27], IC[30], IC[30], IC[30], IC[30], IC[10], IC[10], IC[10]],
+            [IC[27], IC[27], IC[27], IC[30], IC[30], IC[30], IC[30], IC[10], IC[10], IC[10]],
+            [IC[27], IC[27], IC[27], IC[30], IC[30], IC[30], IC[30], IC[10], IC[10], IC[10]],
+            [IC[27], IC[27], IC[27], IC[29], IC[29], IC[29], IC[29], IC[10], IC[10], IC[10]],
+            [IC[26], IC[26], IC[26], IC[29], IC[29], IC[29], IC[29], IC[11], IC[11], IC[11]],
+            [IC[26], IC[26], IC[26], IC[29], IC[29], IC[29], IC[29], IC[11], IC[11], IC[11]],
+            [IC[26], IC[26], IC[26], IC[29], IC[29], IC[29], IC[29], IC[11], IC[11], IC[11]],
+            [IC[25], IC[25], IC[25], IC[28], IC[28], IC[28], IC[28], IC[31], IC[31], IC[31]],
+            [IC[25], IC[25], IC[25], IC[28], IC[28], IC[28], IC[28], IC[31], IC[31], IC[31]],
+            [IC[25], IC[25], IC[25], IC[28], IC[28], IC[28], IC[28], IC[31], IC[31], IC[31]],
+            [IC[25], IC[25], IC[25], IC[28], IC[28], IC[28], IC[28], IC[31], IC[31], IC[31]],
+            [IC[25], IC[25], IC[25], IC[28], IC[28], IC[28], IC[28], IC[31], IC[31], IC[31]],
+            [IC[25], IC[25], IC[25], IC[28], IC[28], IC[28], IC[28], IC[31], IC[31], IC[31]]
+        ]
+        valeurs_BrLeft_bd = [
+            [IC[21], IC[21], IC[21], IC[24], IC[24], IC[24], IC[24], IC[27], IC[27], IC[27]],
+            [IC[21], IC[21], IC[21], IC[24], IC[24], IC[24], IC[24], IC[27], IC[27], IC[27]],
+            [IC[21], IC[21], IC[21], IC[24], IC[24], IC[24], IC[24], IC[27], IC[27], IC[27]],
+            [IC[21], IC[21], IC[21], IC[24], IC[24], IC[24], IC[24], IC[27], IC[27], IC[27]],
+            [IC[21], IC[21], IC[21], IC[24], IC[24], IC[24], IC[24], IC[27], IC[27], IC[27]],
+            [IC[20], IC[20], IC[20], IC[24], IC[24], IC[24], IC[24], IC[27], IC[27], IC[27]],
+            [IC[20], IC[20], IC[20], IC[23], IC[23], IC[23], IC[23], IC[27], IC[27], IC[27]],
+            [IC[20], IC[20], IC[20], IC[23], IC[23], IC[23], IC[23], IC[27], IC[27], IC[27]],
+            [IC[20], IC[20], IC[20], IC[23], IC[23], IC[23], IC[23], IC[27], IC[27], IC[27]],
+            [IC[20], IC[20], IC[20], IC[23], IC[23], IC[23], IC[23], IC[27], IC[27], IC[27]],
+            [IC[15], IC[15], IC[15], IC[23], IC[23], IC[23], IC[23], IC[26], IC[26], IC[26]],
+            [IC[15], IC[15], IC[15], IC[22], IC[22], IC[22], IC[22], IC[26], IC[26], IC[26]],
+            [IC[15], IC[15], IC[15], IC[22], IC[22], IC[22], IC[22], IC[26], IC[26], IC[26]],
+            [IC[15], IC[15], IC[15], IC[22], IC[22], IC[22], IC[22], IC[26], IC[26], IC[26]],
+            [IC[19], IC[19], IC[19], IC[22], IC[22], IC[22], IC[22], IC[25], IC[25], IC[25]],
+            [IC[19], IC[19], IC[19], IC[22], IC[22], IC[22], IC[22], IC[25], IC[25], IC[25]],
+            [IC[19], IC[19], IC[19], IC[19], IC[22], IC[22], IC[25], IC[25], IC[25], IC[25]],
+            [IC[19], IC[19], IC[19], IC[19], IC[22], IC[22], IC[25], IC[25], IC[25], IC[25]]
+        ]
 
-                                 ## 1 Cercle ajouté  ##
-        cv2.ellipse(img, (350, 350), (350, 350), 0, 0, -11.25, (b[2], g[2], r[2]), -1)
-        cv2.ellipse(img, (350, 350), (350, 350), 0, -11.25, -22.5, (b[0], g[0], r[0]), -1)
-        cv2.ellipse(img, (350, 350), (350, 350), 0, -22.5, -33.75, (b[3], g[3], r[3]), -1)
-        cv2.ellipse(img, (350, 350), (350, 350), 0, -33.75, -45, (b[16], g[16], r[16]), -1)
-        cv2.ellipse(img, (350, 350), (350, 350), 0, -45, -56.25, (b[29], g[29], r[29]), -1)
-        cv2.ellipse(img, (350, 350), (350, 350), 0, -56.25, -67.5, (b[31], g[31], r[31]), -1)
-        cv2.ellipse(img, (350, 350), (350, 350), 0, -67.5, -78.75, (b[28], g[28], r[28]), -1)
-        cv2.ellipse(img, (350, 350), (350, 350), 0, -78.75, -90, (b[30], g[30], r[30]), -1)
-                                 ## 2 Cercle ajouté  ##
-        cv2.ellipse(img, (350, 350), (290, 290), 0, 0, -11.25, (b[1], g[1], r[1]), -1)
-        cv2.ellipse(img, (350, 350), (290, 290), 0, -11.25, -22.5, (b[7], g[7], r[7]), -1)
-        cv2.ellipse(img, (350, 350), (290, 290), 0, -22.5, -33.75, (b[5], g[5], r[5]), -1)
-        cv2.ellipse(img, (350, 350), (290, 290), 0, -33.75, -45, (b[6], g[6], r[6]), -1)
-        cv2.ellipse(img, (350, 350), (290, 290), 0, -45, -56.25, (b[4], g[4], r[4]), -1)
-        cv2.ellipse(img, (350, 350), (290, 290), 0, -56.25, -67.5, (b[17], g[17], r[17]), -1)
-        cv2.ellipse(img, (350, 350), (290, 290), 0, -67.5, -78.75, (b[25], g[25], r[25]), -1)
-        cv2.ellipse(img, (350, 350), (290, 290), 0, -78.75, -90, (b[24], g[24], r[24]), -1)
-                                ## 3 Cercle ajouté  ##
-        cv2.ellipse(img, (350, 350), (230, 230), 0, 0, -12.85714286, (b[8], g[8], r[8]), -1)
-        cv2.ellipse(img, (350, 350), (230, 230), 0, -12.85714286, -25.71428571, (b[10], g[10], r[10]), -1)
-        cv2.ellipse(img, (350, 350), (230, 230), 0, -25.71428571, -38.57142857, (b[9], g[9], r[9]), -1)
-        cv2.ellipse(img, (350, 350), (230, 230), 0, -38.57142857, -51.42857143, (b[20], g[20], r[20]), -1)
-        cv2.ellipse(img, (350, 350), (230, 230), 0, -51.42857143, -64.28571429, (b[21], g[21], r[21]), -1)
-        cv2.ellipse(img, (350, 350), (230, 230), 0, -64.28571429, -77.14285715, (b[22], g[22], r[22]), -1)
-        cv2.ellipse(img, (350, 350), (230, 230), 0, -77.14285715, -90, (b[23], g[23], r[23]), -1)
-                                 ## 4 Cercle ajouté  ##
-        cv2.ellipse(img, (350, 350), (170, 170), 0, 0, -18, (b[11], g[11], r[11]), -1)
-        cv2.ellipse(img, (350, 350), (170, 170), 0, -18, -36, (b[18], g[18], r[18]), -1)
-        cv2.ellipse(img, (350, 350), (170, 170), 0, -36, -54, (b[19], g[19], r[19]), -1)
-        cv2.ellipse(img, (350, 350), (170, 170), 0, -54, -72, (b[15], g[15], r[15]), -1)
-        cv2.ellipse(img, (350, 350), (170, 170), 0, -72, -90, (b[14], g[14], r[14]), -1)
-                                ## 5 Cercle ajouté  ##
-        cv2.ellipse(img, (350, 350), (110, 110), 0, 0, -30, (b[27], g[27], r[27]), -1)
-        cv2.ellipse(img, (350, 350), (110, 110), 0, -30, -60, (b[12], g[12], r[12]), -1)
-        cv2.ellipse(img, (350, 350), (110, 110), 0, -60, -90, (b[13], g[13], r[13]), -1)
-                                ## 6 Cercle rjouté  ##
-        cv2.ellipse(img, (350, 350), (50, 50), 0, 0, -90, (b[26], g[26], r[26]), -1)
+        # ============== sein_droit ================#
+        valeurs_BrRight_hg = [
+            [IC[21 + 32], IC[21 + 32], IC[21 + 32], IC[18 + 32], IC[18 + 32], IC[18 + 32], IC[18 + 32], IC[18 + 32],
+             IC[12 + 32], IC[12 + 32]],
+            [IC[21 + 32], IC[21 + 32], IC[21 + 32], IC[18 + 32], IC[18 + 32], IC[18 + 32], IC[18 + 32], IC[18 + 32],
+             IC[12 + 32], IC[12 + 32]],
+            [IC[21 + 32], IC[21 + 32], IC[21 + 32], IC[18 + 32], IC[18 + 32], IC[18 + 32], IC[18 + 32], IC[18 + 32],
+             IC[12 + 32], IC[12 + 32]],
+            [IC[21 + 32], IC[21 + 32], IC[21 + 32], IC[18 + 32], IC[18 + 32], IC[18 + 32], IC[18 + 32], IC[18 + 32],
+             IC[12 + 32], IC[12 + 32]],
+            [IC[21 + 32], IC[21 + 32], IC[21 + 32], IC[18 + 32], IC[18 + 32], IC[18 + 32], IC[18 + 32], IC[18 + 32],
+             IC[12 + 32], IC[12 + 32]],
+            [IC[20 + 32], IC[20 + 32], IC[20 + 32], IC[17 + 32], IC[17 + 32], IC[17 + 32], IC[17 + 32], IC[17 + 32],
+             IC[13 + 32], IC[13 + 32]],
+            [IC[20 + 32], IC[20 + 32], IC[20 + 32], IC[17 + 32], IC[17 + 32], IC[17 + 32], IC[17 + 32], IC[17 + 32],
+             IC[13 + 32], IC[13 + 32]],
+            [IC[20 + 32], IC[20 + 32], IC[20 + 32], IC[17 + 32], IC[17 + 32], IC[17 + 32], IC[17 + 32], IC[17 + 32],
+             IC[13 + 32], IC[13 + 32]],
+            [IC[20 + 32], IC[20 + 32], IC[20 + 32], IC[17 + 32], IC[17 + 32], IC[17 + 32], IC[17 + 32], IC[17 + 32],
+             IC[13 + 32], IC[13 + 32]],
+            [IC[20 + 32], IC[20 + 32], IC[20 + 32], IC[17 + 32], IC[17 + 32], IC[17 + 32], IC[17 + 32], IC[17 + 32],
+             IC[13 + 32], IC[13 + 32]],
+            [IC[15 + 32], IC[15 + 32], IC[15 + 32], IC[16 + 32], IC[16 + 32], IC[16 + 32], IC[16 + 32], IC[16 + 32],
+             IC[14 + 32], IC[14 + 32]],
+            [IC[15 + 32], IC[15 + 32], IC[15 + 32], IC[16 + 32], IC[16 + 32], IC[16 + 32], IC[16 + 32], IC[16 + 32],
+             IC[14 + 32], IC[14 + 32]],
+            [IC[15 + 32], IC[15 + 32], IC[15 + 32], IC[16 + 32], IC[16 + 32], IC[16 + 32], IC[16 + 32], IC[16 + 32],
+             IC[14 + 32], IC[14 + 32]],
+            [IC[15 + 32], IC[15 + 32], IC[15 + 32], IC[16 + 32], IC[16 + 32], IC[16 + 32], IC[16 + 32], IC[16 + 32],
+             IC[14 + 32], IC[14 + 32]],
+            [IC[19 + 32], IC[19 + 32], IC[19 + 32], IC[19 + 32], IC[16 + 32], IC[16 + 32], IC[16 + 32], IC[14 + 32],
+             IC[14 + 32], IC[14 + 32]],
+            [IC[19 + 32], IC[19 + 32], IC[19 + 32], IC[19 + 32], IC[16 + 32], IC[16 + 32], IC[16 + 32], IC[14 + 32],
+             IC[14 + 32], IC[14 + 32]],
+            [IC[19 + 32], IC[19 + 32], IC[19 + 32], IC[19 + 32], IC[16 + 32], IC[16 + 32], IC[16 + 32], IC[14 + 32],
+             IC[14 + 32], IC[14 + 32]],
+            [IC[19 + 32], IC[19 + 32], IC[19 + 32], IC[19 + 32], IC[19 + 32], IC[19 + 32], IC[19 + 32], IC[14 + 32],
+             IC[14 + 32], IC[14 + 32]]
+        ]
+        valeurs_BrRight_hd = [
+            [IC[12 + 32], IC[12 + 32], IC[0 + 32], IC[0 + 32], IC[0 + 32], IC[0 + 32], IC[0 + 32], IC[0 + 32],
+             IC[9 + 32],
+             IC[9 + 32]],
+            [IC[12 + 32], IC[12 + 32], IC[0 + 32], IC[0 + 32], IC[0 + 32], IC[0 + 32], IC[0 + 32], IC[0 + 32],
+             IC[9 + 32],
+             IC[9 + 32]],
+            [IC[12 + 32], IC[12 + 32], IC[3 + 32], IC[3 + 32], IC[0 + 32], IC[0 + 32], IC[1 + 32], IC[1 + 32],
+             IC[9 + 32],
+             IC[9 + 32]],
+            [IC[12 + 32], IC[12 + 32], IC[3 + 32], IC[3 + 32], IC[2 + 32], IC[2 + 32], IC[1 + 32], IC[1 + 32],
+             IC[9 + 32],
+             IC[9 + 32]],
+            [IC[12 + 32], IC[12 + 32], IC[3 + 32], IC[3 + 32], IC[2 + 32], IC[2 + 32], IC[1 + 32], IC[1 + 32],
+             IC[10 + 32],
+             IC[10 + 32]],
+            [IC[12 + 32], IC[12 + 32], IC[3 + 32], IC[3 + 32], IC[2 + 32], IC[2 + 32], IC[1 + 32], IC[1 + 32],
+             IC[10 + 32],
+             IC[10 + 32]],
+            [IC[13 + 32], IC[13 + 32], IC[3 + 32], IC[3 + 32], IC[2 + 32], IC[2 + 32], IC[1 + 32], IC[1 + 32],
+             IC[10 + 32],
+             IC[10 + 32]],
+            [IC[13 + 32], IC[13 + 32], IC[5 + 32], IC[5 + 32], IC[2 + 32], IC[2 + 32], IC[6 + 32], IC[6 + 32],
+             IC[10 + 32],
+             IC[10 + 32]],
+            [IC[13 + 32], IC[13 + 32], IC[5 + 32], IC[5 + 32], IC[4 + 32], IC[4 + 32], IC[6 + 32], IC[6 + 32],
+             IC[11 + 32],
+             IC[11 + 32]],
+            [IC[13 + 32], IC[13 + 32], IC[5 + 32], IC[5 + 32], IC[4 + 32], IC[4 + 32], IC[6 + 32], IC[6 + 32],
+             IC[11 + 32],
+             IC[11 + 32]],
+            [IC[13 + 32], IC[13 + 32], IC[5 + 32], IC[5 + 32], IC[4 + 32], IC[4 + 32], IC[6 + 32], IC[6 + 32],
+             IC[11 + 32],
+             IC[11 + 32]],
+            [IC[14 + 32], IC[14 + 32], IC[14 + 32], IC[7 + 32], IC[7 + 32], IC[7 + 32], IC[7 + 32], IC[31 + 32],
+             IC[31 + 32], IC[31 + 32]],
+            [IC[14 + 32], IC[14 + 32], IC[14 + 32], IC[7 + 32], IC[7 + 32], IC[7 + 32], IC[7 + 32], IC[31 + 32],
+             IC[31 + 32], IC[31 + 32]],
+            [IC[14 + 32], IC[14 + 32], IC[14 + 32], IC[7 + 32], IC[7 + 32], IC[7 + 32], IC[7 + 32], IC[31 + 32],
+             IC[31 + 32], IC[31 + 32]],
+            [IC[14 + 32], IC[14 + 32], IC[14 + 32], IC[8 + 32], IC[8 + 32], IC[8 + 32], IC[8 + 32], IC[31 + 32],
+             IC[31 + 32], IC[31 + 32]],
+            [IC[14 + 32], IC[14 + 32], IC[14 + 32], IC[8 + 32], IC[8 + 32], IC[8 + 32], IC[8 + 32], IC[31 + 32],
+             IC[31 + 32], IC[31 + 32]],
+            [IC[14 + 32], IC[14 + 32], IC[14 + 32], IC[8 + 32], IC[8 + 32], IC[8 + 32], IC[8 + 32], IC[31 + 32],
+             IC[31 + 32], IC[31 + 32]],
+            [IC[14 + 32], IC[14 + 32], IC[14 + 32], IC[8 + 32], IC[8 + 32], IC[8 + 32], IC[8 + 32], IC[31 + 32],
+             IC[31 + 32], IC[31 + 32]]
+        ]
+        valeurs_BrRight_bg = [
+            [IC[27 + 32], IC[27 + 32], IC[27 + 32], IC[24 + 32], IC[24 + 32], IC[24 + 32], IC[24 + 32], IC[21 + 32],
+             IC[21 + 32], IC[21 + 32]],
+            [IC[27 + 32], IC[27 + 32], IC[27 + 32], IC[24 + 32], IC[24 + 32], IC[24 + 32], IC[24 + 32], IC[21 + 32],
+             IC[21 + 32], IC[21 + 32]],
+            [IC[27 + 32], IC[27 + 32], IC[27 + 32], IC[24 + 32], IC[24 + 32], IC[24 + 32], IC[24 + 32], IC[21 + 32],
+             IC[21 + 32], IC[21 + 32]],
+            [IC[27 + 32], IC[27 + 32], IC[27 + 32], IC[24 + 32], IC[24 + 32], IC[24 + 32], IC[24 + 32], IC[21 + 32],
+             IC[21 + 32], IC[21 + 32]],
+            [IC[27 + 32], IC[27 + 32], IC[27 + 32], IC[24 + 32], IC[24 + 32], IC[24 + 32], IC[24 + 32], IC[21 + 32],
+             IC[21 + 32], IC[21 + 32]],
+            [IC[27 + 32], IC[27 + 32], IC[27 + 32], IC[24 + 32], IC[24 + 32], IC[24 + 32], IC[24 + 32], IC[20 + 32],
+             IC[20 + 32], IC[20 + 32]],
+            [IC[27 + 32], IC[27 + 32], IC[27 + 32], IC[23 + 32], IC[23 + 32], IC[23 + 32], IC[23 + 32], IC[20 + 32],
+             IC[20 + 32], IC[20 + 32]],
+            [IC[27 + 32], IC[27 + 32], IC[27 + 32], IC[23 + 32], IC[23 + 32], IC[23 + 32], IC[23 + 32], IC[20 + 32],
+             IC[20 + 32], IC[20 + 32]],
+            [IC[27 + 32], IC[27 + 32], IC[27 + 32], IC[23 + 32], IC[23 + 32], IC[23 + 32], IC[23 + 32], IC[20 + 32],
+             IC[20 + 32], IC[20 + 32]],
+            [IC[27 + 32], IC[27 + 32], IC[27 + 32], IC[23 + 32], IC[23 + 32], IC[23 + 32], IC[23 + 32], IC[20 + 32],
+             IC[20 + 32], IC[20 + 32]],
+            [IC[26 + 32], IC[26 + 32], IC[26 + 32], IC[23 + 32], IC[23 + 32], IC[23 + 32], IC[23 + 32], IC[15 + 32],
+             IC[15 + 32], IC[15 + 32]],
+            [IC[26 + 32], IC[26 + 32], IC[26 + 32], IC[22 + 32], IC[22 + 32], IC[22 + 32], IC[22 + 32], IC[15 + 32],
+             IC[15 + 32], IC[15 + 32]],
+            [IC[26 + 32], IC[26 + 32], IC[26 + 32], IC[22 + 32], IC[22 + 32], IC[22 + 32], IC[22 + 32], IC[15 + 32],
+             IC[15 + 32], IC[15 + 32]],
+            [IC[26 + 32], IC[26 + 32], IC[26 + 32], IC[22 + 32], IC[22 + 32], IC[22 + 32], IC[22 + 32], IC[15 + 32],
+             IC[15 + 32], IC[15 + 32]],
+            [IC[25 + 32], IC[25 + 32], IC[25 + 32], IC[22 + 32], IC[22 + 32], IC[22 + 32], IC[22 + 32], IC[19 + 32],
+             IC[19 + 32], IC[19 + 32]],
+            [IC[25 + 32], IC[25 + 32], IC[25 + 32], IC[22 + 32], IC[22 + 32], IC[22 + 32], IC[22 + 32], IC[19 + 32],
+             IC[19 + 32], IC[19 + 32]],
+            [IC[25 + 32], IC[25 + 32], IC[25 + 32], IC[25 + 32], IC[22 + 32], IC[22 + 32], IC[19 + 32], IC[19 + 32],
+             IC[19 + 32], IC[19 + 32]],
+            [IC[25 + 32], IC[25 + 32], IC[25 + 32], IC[25 + 32], IC[22 + 32], IC[22 + 32], IC[19 + 32], IC[19 + 32],
+             IC[19 + 32], IC[19 + 32]]
+        ]
+        valeurs_BrRight_bd = [
+            [IC[9 + 32], IC[9 + 32], IC[9 + 32], IC[30 + 32], IC[30 + 32], IC[30 + 32], IC[30 + 32], IC[27 + 32],
+             IC[27 + 32], IC[27 + 32]],
+            [IC[9 + 32], IC[9 + 32], IC[9 + 32], IC[30 + 32], IC[30 + 32], IC[30 + 32], IC[30 + 32], IC[27 + 32],
+             IC[27 + 32], IC[27 + 32]],
+            [IC[9 + 32], IC[9 + 32], IC[9 + 32], IC[30 + 32], IC[30 + 32], IC[30 + 32], IC[30 + 32], IC[27 + 32],
+             IC[27 + 32], IC[27 + 32]],
+            [IC[9 + 32], IC[9 + 32], IC[9 + 32], IC[30 + 32], IC[30 + 32], IC[30 + 32], IC[30 + 32], IC[27 + 32],
+             IC[27 + 32], IC[27 + 32]],
+            [IC[9 + 32], IC[9 + 32], IC[9 + 32], IC[30 + 32], IC[30 + 32], IC[30 + 32], IC[30 + 32], IC[27 + 32],
+             IC[27 + 32], IC[27 + 32]],
+            [IC[10 + 32], IC[10 + 32], IC[10 + 32], IC[30 + 32], IC[30 + 32], IC[30 + 32], IC[30 + 32], IC[27 + 32],
+             IC[27 + 32], IC[27 + 32]],
+            [IC[10 + 32], IC[10 + 32], IC[10 + 32], IC[30 + 32], IC[30 + 32], IC[30 + 32], IC[30 + 32], IC[27 + 32],
+             IC[27 + 32], IC[27 + 32]],
+            [IC[10 + 32], IC[10 + 32], IC[10 + 32], IC[30 + 32], IC[30 + 32], IC[30 + 32], IC[30 + 32], IC[27 + 32],
+             IC[27 + 32], IC[27 + 32]],
+            [IC[10 + 32], IC[10 + 32], IC[10 + 32], IC[29 + 32], IC[29 + 32], IC[29 + 32], IC[29 + 32], IC[27 + 32],
+             IC[27 + 32], IC[27 + 32]],
+            [IC[11 + 32], IC[11 + 32], IC[11 + 32], IC[29 + 32], IC[29 + 32], IC[29 + 32], IC[29 + 32], IC[26 + 32],
+             IC[26 + 32], IC[26 + 32]],
+            [IC[11 + 32], IC[11 + 32], IC[11 + 32], IC[29 + 32], IC[29 + 32], IC[29 + 32], IC[29 + 32], IC[26 + 32],
+             IC[26 + 32], IC[26 + 32]],
+            [IC[11 + 32], IC[11 + 32], IC[11 + 32], IC[29 + 32], IC[29 + 32], IC[29 + 32], IC[29 + 32], IC[26 + 32],
+             IC[26 + 32], IC[26 + 32]],
+            [IC[31 + 32], IC[31 + 32], IC[31 + 32], IC[28 + 32], IC[28 + 32], IC[28 + 32], IC[28 + 32], IC[25 + 32],
+             IC[25 + 32], IC[25 + 32]],
+            [IC[31 + 32], IC[31 + 32], IC[31 + 32], IC[28 + 32], IC[28 + 32], IC[28 + 32], IC[28 + 32], IC[25 + 32],
+             IC[25 + 32], IC[25 + 32]],
+            [IC[31 + 32], IC[31 + 32], IC[31 + 32], IC[28 + 32], IC[28 + 32], IC[28 + 32], IC[28 + 32], IC[25 + 32],
+             IC[25 + 32], IC[25 + 32]],
+            [IC[31 + 32], IC[31 + 32], IC[31 + 32], IC[28 + 32], IC[28 + 32], IC[28 + 32], IC[28 + 32], IC[25 + 32],
+             IC[25 + 32], IC[25 + 32]],
+            [IC[31 + 32], IC[31 + 32], IC[31 + 32], IC[28 + 32], IC[28 + 32], IC[28 + 32], IC[28 + 32], IC[25 + 32],
+             IC[25 + 32], IC[25 + 32]],
+            [IC[31 + 32], IC[31 + 32], IC[31 + 32], IC[28 + 32], IC[28 + 32], IC[28 + 32], IC[28 + 32], IC[25 + 32],
+             IC[25 + 32], IC[25 + 32]]
+        ]
 
-            #############################################################
-            #                 Le 2eme Quadrant Inf_droit                #
-            #############################################################
+        valeurs_sein_gauche = [
+            valeurs_BrLeft_bd,
+            valeurs_BrLeft_hd,
+            valeurs_BrLeft_hg,
+            valeurs_BrLeft_bg
+        ]
+        valeurs_sein_droit = [
+            valeurs_BrRight_bd,
+            valeurs_BrRight_hd,
+            valeurs_BrRight_hg,
+            valeurs_BrRight_bg
+        ]
 
-                            ## 1 Cercle ajouté  ##
-        cv2.ellipse(img, (350, 350), (350, 350), 0, 0, 11.25, (b[62], g[62], r[62]), -1)
-        cv2.ellipse(img, (350, 350), (350, 350), 0, 11.25, 22.5, (b[60], g[60], r[60]), -1)
-        cv2.ellipse(img, (350, 350), (350, 350), 0, 22.5, 33.75, (b[63], g[63], r[63]), -1)
-        cv2.ellipse(img, (350, 350), (350, 350), 0, 33.75, 45, (b[61], g[61], r[61]), -1)
-        cv2.ellipse(img, (350, 350), (350, 350), 0, 45, 56.25, (b[48], g[48], r[48]), -1)
-        cv2.ellipse(img, (350, 350), (350, 350), 0, 56.25, 67.5, (b[35], g[35], r[35]), -1)
-        cv2.ellipse(img, (350, 350), (350, 350), 0, 67.5, 78.75, (b[32], g[32], r[32]), -1)
-        cv2.ellipse(img, (350, 350), (350, 350), 0, 78.75, 90, (b[34], g[34], r[34]), -1)
+        # tmin = cv2.getTrackbarPos("Tmin x10", win_name) / 10.0
+        # tmax = cv2.getTrackbarPos("Tmax x10", win_name) / 10.0
+        seuil = 35
+        gamma_track = 0.5
+        if tmax <= tmin + 0.1: tmax = tmin + 0.1
 
-                            ## 2 Cercle ajouté  ##
-        cv2.ellipse(img, (350, 350), (290, 290), 0, 0, 11.25, (b[56], g[56], r[56]), -1)
-        cv2.ellipse(img, (350, 350), (290, 290), 0, 11.25, 22.5, (b[57], g[57], r[57]), -1)
-        cv2.ellipse(img, (350, 350), (290, 290), 0, 22.5, 33.75, (b[49], g[49], r[49]), -1)
-        cv2.ellipse(img, (350, 350), (290, 290), 0, 33.75, 45, (b[36], g[36], r[36]), -1)
-        cv2.ellipse(img, (350, 350), (290, 290), 0, 45, 56.25, (b[38], g[38], r[38]), -1)
-        cv2.ellipse(img, (350, 350), (290, 290), 0, 56.25, 67.5, (b[37], g[37], r[37]), -1)
-        cv2.ellipse(img, (350, 350), (290, 290), 0, 67.5, 78.75, (b[39], g[39], r[39]), -1)
-        cv2.ellipse(img, (350, 350), (290, 290), 0, 78.75, 90, (b[33], g[33], r[33]), -1)
-                              ## 3 Cercle ajouté  ##
-        cv2.ellipse(img, (350, 350), (230, 230), 0, 0, 12.85714286, (b[55], g[55], r[55]), -1)
-        cv2.ellipse(img, (350, 350), (230, 230), 0, 12.85714286, 25.71428571, (b[54], g[54], r[54]), -1)
-        cv2.ellipse(img, (350, 350), (230, 230), 0, 25.71428571, 38.57142857, (b[53], g[53], r[53]), -1)
-        cv2.ellipse(img, (350, 350), (230, 230), 0, 38.57142857, 51.42857143, (b[52], g[52], r[52]), -1)
-        cv2.ellipse(img, (350, 350), (230, 230), 0, 51.42857143, 64.28571429, (b[41], g[41], r[41]), -1)
-        cv2.ellipse(img, (350, 350), (230, 230), 0, 64.28571429, 77.14285715, (b[42], g[42], r[42]), -1)
-        cv2.ellipse(img, (350, 350), (230, 230), 0, 77.14285715, 90, (b[40], g[40], r[40]), -1)
-                             ## 4 Cercle ajouté  ##
-        cv2.ellipse(img, (350, 350), (170, 170), 0, 0, 18, (b[46], g[46], r[46]), -1)
-        cv2.ellipse(img, (350, 350), (170, 170), 0, 18, 36, (b[47], g[47], r[47]), -1)
-        cv2.ellipse(img, (350, 350), (170, 170), 0, 36, 54, (b[51], g[51], r[51]), -1)
-        cv2.ellipse(img, (350, 350), (170, 170), 0, 54, 72, (b[50], g[50], r[50]), -1)
-        cv2.ellipse(img, (350, 350), (170, 170), 0, 72, 90, (b[43], g[43], r[43]), -1)
-                              ## 5 Cercle ajouté  ##
-        cv2.ellipse(img, (350, 350), (110, 110), 0, 0, 30, (b[45], g[45], r[45]), -1)
-        cv2.ellipse(img, (350, 350), (110, 110), 0, 30, 60, (b[44], g[44], r[44]), -1)
-        cv2.ellipse(img, (350, 350), (110, 110), 0, 60, 90, (b[59], g[59], r[59]), -1)
-                            ## 6 Cercle ajouté  ##
-        cv2.ellipse(img, (350, 350), (50, 50), 0, 0, 90, (b[58], g[58], r[58]), -1)
-                        #############################################################
-                        #                 Le 3eme Quadrant Sup_gauche               #
-                        #############################################################
+        img = img_base.copy()
 
-                                     ## 1 Cercle ajouté  ##
-        cv2.ellipse(img, (350, 350), (350, 350), -90, 0, -11.25, (b[98], g[98], r[98]), -1)
-        cv2.ellipse(img, (350, 350), (350, 350), -90, -11.25, -22.5, (b[96], g[96], r[96]), -1)
-        cv2.ellipse(img, (350, 350), (350, 350), -90, -22.5, -33.75, (b[99], g[99], r[99]), -1)
-        cv2.ellipse(img, (350, 350), (350, 350), -90, -33.75, -45, (b[112], g[112], r[112]), -1)
-        cv2.ellipse(img, (350, 350), (350, 350), -90, -45, -56.25, (b[125], g[125], r[125]), -1)
-        cv2.ellipse(img, (350, 350), (350, 350), -90, -56.25, -67.5, (b[127], g[127], r[127]), -1)
-        cv2.ellipse(img, (350, 350), (350, 350), -90, -67.5, -78.75, (b[124], g[124], r[124]), -1)
-        cv2.ellipse(img, (350, 350), (350, 350), -90, -78.75, -90, (b[126], g[126], r[126]), -1)
-                                                ## 2 Cercle ajouté  ##
-        cv2.ellipse(img, (350, 350), (290, 290), -90, 0, -11.25, (b[97], g[97], r[97]), -1)
-        cv2.ellipse(img, (350, 350), (290, 290), -90, -11.25, -22.5, (b[103], g[103], r[103]), -1)
-        cv2.ellipse(img, (350, 350), (290, 290), -90, -22.5, -33.75, (b[101], g[101], r[101]), -1)
-        cv2.ellipse(img, (350, 350), (290, 290), -90, -33.75, -45, (b[102], g[102], r[102]), -1)
-        cv2.ellipse(img, (350, 350), (290, 290), -90, -45, -56.25, (b[100], g[100], r[100]), -1)
-        cv2.ellipse(img, (350, 350), (290, 290), -90, -56.25, -67.5, (b[113], g[113], r[113]), -1)
-        cv2.ellipse(img, (350, 350), (290, 290), -90, -67.5, -78.75, (b[121], g[121], r[121]), -1)
-        cv2.ellipse(img, (350, 350), (290, 290), -90, -78.75, -90, (b[120], g[120], r[120]), -1)
+        # ---------------- Sein gauche ----------------
+        gx_g, gy_g, gz_g, mask_g = compute_grid(centre_gauche, rayons, nb_sections, valeurs_sein_gauche, grid_res=360)
+        gz_smooth_g, mask_roi_g, offset_g = render_heatmap_on_image(img, centre_gauche, gx_g, gy_g, gz_g, mask_g, tmin,
+                                                                    seuil_chaud_init, gamma=gamma_track)
+        chaud_g, pct_g = detect_hot_zones_and_smooth(gz_smooth_g, mask_g, seuil)
+        annotations_g = draw_contours_and_boxes(img, centre_gauche, chaud_g, gz_smooth_g, offset_info=offset_g,
+                                                couleur=(0, 0, 200))
 
-                                             ## 3 Cercle ajouté  ##
-        cv2.ellipse(img, (350, 350), (230, 230), -90, 0, -12.85714286, (b[104], g[104], r[104]), -1)
-        cv2.ellipse(img, (350, 350), (230, 230), -90, -12.85714286, -25.71428571, (b[106], g[106], r[106]), -1)
-        cv2.ellipse(img, (350, 350), (230, 230), -90, -25.71428571, -38.57142857, (b[105], g[105], r[105]), -1)
-        cv2.ellipse(img, (350, 350), (230, 230), -90, -38.57142857, -51.42857143, (b[116], g[116], r[116]), -1)
-        cv2.ellipse(img, (350, 350), (230, 230), -90, -51.42857143, -64.28571429, (b[117], g[117], r[117]), -1)
-        cv2.ellipse(img, (350, 350), (230, 230), -90, -64.28571429, -77.14285715, (b[118], g[118], r[118]), -1)
-        cv2.ellipse(img, (350, 350), (230, 230), -90, -77.14285715, -90, (b[119], g[119], r[119]), -1)
+        # ---------------- Sein droit ----------------
+        gx_d, gy_d, gz_d, mask_d = compute_grid(centre_droit, rayons, nb_sections, valeurs_sein_droit, grid_res=360)
+        gz_smooth_d, mask_roi_d, offset_d = render_heatmap_on_image(img, centre_droit, gx_d, gy_d, gz_d, mask_d, tmin,
+                                                                    seuil_chaud_init,
+                                                                    gamma=gamma_track)
+        chaud_d, pct_d = detect_hot_zones_and_smooth(gz_smooth_d, mask_d, seuil)
+        annotations_d = draw_contours_and_boxes(img, centre_droit, chaud_d, gz_smooth_d, offset_info=offset_d,
+                                                couleur=(0, 0, 200))
 
-                                                ## 4 Cercle ajouté  ##
-        cv2.ellipse(img, (350, 350), (170, 170), -90, 0, -18, (b[107], g[107], r[107]), -1)
-        cv2.ellipse(img, (350, 350), (170, 170), -90, -18, -36, (b[114], g[114], r[114]), -1)
-        cv2.ellipse(img, (350, 350), (170, 170), -90, -36, -54, (b[115], g[115], r[115]), -1)
-        cv2.ellipse(img, (350, 350), (170, 170), -90, -54, -72, (b[111], g[111], r[111]), -1)
-        cv2.ellipse(img, (350, 350), (170, 170), -90, -72, -90, (b[110], g[110], r[110]), -1)
+        # ---------------- Détection des zones d'asymétrie ----------------
+        seuil_asymetrie = 0.5  # Seuil d'asymétrie en °C
+        zones_asym_g = detecter_zones_asymetrie(gz_smooth_g, gz_smooth_d, seuil_asymetrie)
+        zones_asym_d = detecter_zones_asymetrie(gz_smooth_d, gz_smooth_g, seuil_asymetrie)
 
-                                             ## 5 Cercle ajouté  ##
-        cv2.ellipse(img, (350, 350), (110, 110), -90, 0, -30, (b[123], g[123], r[123]), -1)
-        cv2.ellipse(img, (350, 350), (110, 110), -90, -30, -60, (b[108], g[108], r[108]), -1)
-        cv2.ellipse(img, (350, 350), (110, 110), -90, -60, -90, (b[109], g[109], r[109]), -1)
+        # Dessiner les contours d'asymétrie (en jaune/cyan)
+        nb_zones_asym_g = dessiner_contours_asymetrie(img, centre_gauche, zones_asym_g, gz_smooth_g,
+                                                      offset_info=offset_g, couleur=(0, 255, 255))  # Jaune
+        nb_zones_asym_d = dessiner_contours_asymetrie(img, centre_droit, zones_asym_d, gz_smooth_d,
+                                                      offset_info=offset_d, couleur=(255, 255, 0))  # Cyan
 
-                                            ## 6 Cercle rjouté  ##
-        cv2.ellipse(img, (350, 350), (50, 50), -90, 0, -90, (b[122], g[122], r[122]), -1)
+        # ---------------- Stockage grilles ----------------
+        last_grids['gauche'] = (gx_g, gy_g, gz_smooth_g, mask_g)
+        last_grids['droit'] = (gx_d, gy_d, gz_smooth_d, mask_d)
 
-                            #############################################################
-                            #                  Le 4eme Quadrant Inf_gauche              #
-                            #############################################################
+        # ---------------- Statistiques ----------------
+        mean_g, mean_d = float(np.nanmean(gz_smooth_g)), float(np.nanmean(gz_smooth_d))
+        min_g, max_g = float(np.nanmin(gz_smooth_g)), float(np.nanmax(gz_smooth_g))
+        min_d, max_d = float(np.nanmin(gz_smooth_d)), float(np.nanmax(gz_smooth_d))
 
-                                             ## 1 Cercle ajouté  ##
+        # Calcul de l'asymétrie globale
+        diff_grid = np.abs(gz_smooth_g - gz_smooth_d)
+        asym = float(np.nanmax(diff_grid)) if np.any(~np.isnan(diff_grid)) else 0.0
+        asym = round(asym, 2)
 
-        cv2.ellipse(img, (350, 350), (350, 350), 90, 0, 11.25, (b[94], g[94], r[94]), -1)
-        cv2.ellipse(img, (350, 350), (350, 350), 90, 11.25, 22.5, (b[92], g[92], r[92]), -1)
-        cv2.ellipse(img, (350, 350), (350, 350), 90, 22.5, 33.75, (b[95], g[95], r[95]), -1)
-        cv2.ellipse(img, (350, 350), (350, 350), 90, 33.75, 45, (b[93], g[93], r[93]), -1)
-        cv2.ellipse(img, (350, 350), (350, 350), 90, 45, 56.25, (b[80], g[80], r[80]), -1)
-        cv2.ellipse(img, (350, 350), (350, 350), 90, 56.25, 67.5, (b[67], g[67], r[67]), -1)
-        cv2.ellipse(img, (350, 350), (350, 350), 90, 67.5, 78.75, (b[64], g[64], r[64]), -1)
-        cv2.ellipse(img, (350, 350), (350, 350), 90, 78.75, 90, (b[66], g[66], r[66]), -1)
+        alert = (pct_g > 10.0 or pct_d > 10.0 or asym > 1.5 or nb_zones_asym_g > 0 or nb_zones_asym_d > 0)
 
-                                                  ## 2 Cercle ajouté  ##
-        cv2.ellipse(img, (350, 350), (290, 290), 90, 0, 11.25, (b[88], g[88], r[88]), -1)
-        cv2.ellipse(img, (350, 350), (290, 290), 90, 11.25, 22.5, (b[89], g[89], r[89]), -1)
-        cv2.ellipse(img, (350, 350), (290, 290), 90, 22.5, 33.75, (b[81], g[81], r[81]), -1)
-        cv2.ellipse(img, (350, 350), (290, 290), 90, 33.75, 45, (b[68], g[68], r[68]), -1)
-        cv2.ellipse(img, (350, 350), (290, 290), 90, 45, 56.25, (b[70], g[70], r[70]), -1)
-        cv2.ellipse(img, (350, 350), (290, 290), 90, 56.25, 67.5, (b[69], g[69], r[69]), -1)
-        cv2.ellipse(img, (350, 350), (290, 290), 90, 67.5, 78.75, (b[71], g[71], r[71]), -1)
-        cv2.ellipse(img, (350, 350), (290, 290), 90, 78.75, 90, (b[65], g[65], r[65]), -1)
+        # ---------------- Colorbar centrale ----------------
+        bar_h, bar_w = 450, 10
+        bar = np.linspace(seuil_chaud_init, tmin, bar_h).reshape(bar_h, 1)
+        denom = max(1e-6, seuil_chaud_init - tmin)
+        bar_norm = ((bar - tmin) / denom * 255).astype(np.uint8)
+        bar_img = cv2.applyColorMap(bar_norm, cv2.COLORMAP_JET)
+        x_bar = (centre_gauche[0] + centre_droit[0]) // 2 - bar_w // 2
+        y_bar = (screen_height // 2) - bar_h // 2
+        img[y_bar:y_bar + bar_h, x_bar:x_bar + bar_w] = cv2.resize(bar_img, (bar_w, bar_h))
 
-                                                 ## 3 Cercle ajouté  ##
-        cv2.ellipse(img, (350, 350), (230, 230), 90, 0, 12.85714286, (b[87], g[87], r[87]), -1)
-        cv2.ellipse(img, (350, 350), (230, 230), 90, 12.85714286, 25.71428571, (b[86], g[86], r[86]), -1)
-        cv2.ellipse(img, (350, 350), (230, 230), 90, 25.71428571, 38.57142857, (b[85], g[85], r[85]), -1)
-        cv2.ellipse(img, (350, 350), (230, 230), 90, 38.57142857, 51.42857143, (b[84], g[84], r[84]), -1)
-        cv2.ellipse(img, (350, 350), (230, 230), 90, 51.42857143, 64.28571429, (b[73], g[73], r[73]), -1)
-        cv2.ellipse(img, (350, 350), (230, 230), 90, 64.28571429, 77.14285715, (b[74], g[74], r[74]), -1)
-        cv2.ellipse(img, (350, 350), (230, 230), 90, 77.14285715, 90, (b[72], g[72], r[72]), -1)
+        cv2.putText(img, f"{seuil_chaud_init:.1f}", (x_bar + bar_w + 10, y_bar + 15),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (10, 10, 10), 2)
+        cv2.putText(img, f"{tmin:.1f}", (x_bar + bar_w + 10, y_bar + bar_h - 5),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (10, 10, 10), 2)
+        cv2.putText(img, "Temp (C)", (x_bar - 15, y_bar - 20),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (20, 20, 20), 2)
 
-                                                ## 4 Cercle ajouté  ##
-        cv2.ellipse(img, (350, 350), (170, 170), 90, 0, 18, (b[78], g[78], r[78]), -1)
-        cv2.ellipse(img, (350, 350), (170, 170), 90, 18, 36, (b[79], g[79], r[79]), -1)
-        cv2.ellipse(img, (350, 350), (170, 170), 90, 36, 54, (b[83], g[83], r[83]), -1)
-        cv2.ellipse(img, (350, 350), (170, 170), 90, 54, 72, (b[82], g[82], r[82]), -1)
-        cv2.ellipse(img, (350, 350), (170, 170), 90, 72, 90, (b[75], g[75], r[75]), -1)
+        # ---------------- Overlay anatomique ----------------
+        if overlay_on:
+            draw_anatomical_overlay(img, centre_gauche, max_radius, alpha=0.22)
+            draw_anatomical_overlay(img, centre_droit, max_radius, alpha=0.22)
 
-                                                 ## 5 Cercle ajouté  ##
-        cv2.ellipse(img, (350, 350), (110, 110), 90, 0, 30, (b[77], g[77], r[77]), -1)
-        cv2.ellipse(img, (350, 350), (110, 110), 90, 30, 60, (b[76], g[76], r[76]), -1)
-        cv2.ellipse(img, (350, 350), (110, 110), 90, 60, 90, (b[91], g[91], r[91]), -1)
-
-                                                  ## 6 Cercle rjouté  ##
-        cv2.ellipse(img, (350, 350), (50, 50), 90, 0, 90, (b[90], g[90], r[90]), -1)
-
-        #############################################
-        #       Le Sein gauche     #
-        #############################################
-
-        #############################################################
-        #                 Le 1er Quadrant Sup_droit                 #
-        #############################################################
-
-        ## 1 Cercle ajouté  ##
-        cv2.ellipse(img, (1350, 350), (350, 350), 0, 0, -11.25, (b[2], g[2], r[2]), -1)
-        cv2.ellipse(img, (1350, 350), (350, 350), 0, -11.25, -22.5, (b[0], g[0], r[0]), -1)
-        cv2.ellipse(img, (1350, 350), (350, 350), 0, -22.5, -33.75, (b[3], g[3], r[3]), -1)
-        cv2.ellipse(img, (1350, 350), (350, 350), 0, -33.75, -45, (b[16], g[16], r[16]), -1)
-        cv2.ellipse(img, (1350, 350), (350, 350), 0, -45, -56.25, (b[29], g[29], r[29]), -1)
-        cv2.ellipse(img, (1350, 350), (350, 350), 0, -56.25, -67.5, (b[31], g[31], r[31]), -1)
-        cv2.ellipse(img, (1350, 350), (350, 350), 0, -67.5, -78.75, (b[28], g[28], r[28]), -1)
-        cv2.ellipse(img, (1350, 350), (350, 350), 0, -78.75, -90, (b[30], g[30], r[30]), -1)
-
-        ## 2 Cercle ajouté  ##
-        cv2.ellipse(img, (1350, 350), (290, 290), 0, 0, -11.25, (b[1], g[1], r[1]), -1)
-        cv2.ellipse(img, (1350, 350), (290, 290), 0, -11.25, -22.5, (b[7], g[7], r[7]), -1)
-        cv2.ellipse(img, (1350, 350), (290, 290), 0, -22.5, -33.75, (b[5], g[5], r[5]), -1)
-        cv2.ellipse(img, (1350, 350), (290, 290), 0, -33.75, -45, (b[6], g[6], r[6]), -1)
-        cv2.ellipse(img, (1350, 350), (290, 290), 0, -45, -56.25, (b[4], g[4], r[4]), -1)
-        cv2.ellipse(img, (1350, 350), (290, 290), 0, -56.25, -67.5, (b[17], g[17], r[17]), -1)
-        cv2.ellipse(img, (1350, 350), (290, 290), 0, -67.5, -78.75, (b[25], g[25], r[25]), -1)
-        cv2.ellipse(img, (1350, 350), (290, 290), 0, -78.75, -90, (b[24], g[24], r[24]), -1)
-
-        # ## 3 Cercle ajouté  ##
-        cv2.ellipse(img, (1350, 350), (230, 230), 0, 0, -12.85714286, (b[8], g[8], r[8]), -1)
-        cv2.ellipse(img, (1350, 350), (230, 230), 0, -12.85714286, -25.71428571, (b[10], g[10], r[10]), -1)
-        cv2.ellipse(img, (1350, 350), (230, 230), 0, -25.71428571, -38.57142857, (b[9], g[9], r[9]), -1)
-        cv2.ellipse(img, (1350, 350), (230, 230), 0, -38.57142857, -51.42857143, (b[20], g[20], r[20]), -1)
-        cv2.ellipse(img, (1350, 350), (230, 230), 0, -51.42857143, -64.28571429, (b[21], g[21], r[21]), -1)
-        cv2.ellipse(img, (1350, 350), (230, 230), 0, -64.28571429, -77.14285715, (b[22], g[22], r[22]), -1)
-        cv2.ellipse(img, (1350, 350), (230, 230), 0, -77.14285715, -90, (b[23], g[23], r[23]), -1)
-
-        # ## 4 Cercle ajouté  ##
-        cv2.ellipse(img, (1350, 350), (170, 170), 0, 0, -18, (b[11], g[11], r[11]), -1)
-        cv2.ellipse(img, (1350, 350), (170, 170), 0, -18, -36, (b[18], g[18], r[18]), -1)
-        cv2.ellipse(img, (1350, 350), (170, 170), 0, -36, -54, (b[19], g[19], r[19]), -1)
-        cv2.ellipse(img, (1350, 350), (170, 170), 0, -54, -72, (b[15], g[15], r[15]), -1)
-        cv2.ellipse(img, (1350, 350), (170, 170), 0, -72, -90, (b[14], g[14], r[14]), -1)
-
-        # ## 5 Cercle ajouté  ##
-        cv2.ellipse(img, (1350, 350), (110, 110), 0, 0, -30, (b[27], g[27], r[27]), -1)
-        cv2.ellipse(img, (1350, 350), (110, 110), 0, -30, -60, (b[12], g[12], r[12]), -1)
-        cv2.ellipse(img, (1350, 350), (110, 110), 0, -60, -90, (b[13], g[13], r[13]), -1)
-
-        # ## 6 Cercle rjouté  ##
-        cv2.ellipse(img, (1350, 350), (50, 50), 0, 0, -90, (b[26], g[26], r[26]), -1)
-        #
-        # #############################################################
-        # #                 Le 2eme Quadrant Inf_droit                #
-        # #############################################################
-        #
-        # ## 1 Cercle ajouté  ##
-        cv2.ellipse(img, (1350, 350), (350, 350), 0, 0, 11.25, (b[62], g[62], r[62]), -1)
-        cv2.ellipse(img, (1350, 350), (350, 350), 0, 11.25, 22.5, (b[60], g[60], r[60]), -1)
-        cv2.ellipse(img, (1350, 350), (350, 350), 0, 22.5, 33.75, (b[63], g[63], r[63]), -1)
-        cv2.ellipse(img, (1350, 350), (350, 350), 0, 33.75, 45, (b[61], g[61], r[61]), -1)
-        cv2.ellipse(img, (1350, 350), (350, 350), 0, 45, 56.25, (b[48], g[48], r[48]), -1)
-        cv2.ellipse(img, (1350, 350), (350, 350), 0, 56.25, 67.5, (b[35], g[35], r[35]), -1)
-        cv2.ellipse(img, (1350, 350), (350, 350), 0, 67.5, 78.75, (b[32], g[32], r[32]), -1)
-        cv2.ellipse(img, (1350, 350), (350, 350), 0, 78.75, 90, (b[34], g[34], r[34]), -1)
-        #
-        # ## 2 Cercle ajouté  ##
-        cv2.ellipse(img, (1350, 350), (290, 290), 0, 0, 11.25, (b[56], g[56], r[56]), -1)
-        cv2.ellipse(img, (1350, 350), (290, 290), 0, 11.25, 22.5, (b[57], g[57], r[57]), -1)
-        cv2.ellipse(img, (1350, 350), (290, 290), 0, 22.5, 33.75, (b[49], g[49], r[49]), -1)
-        cv2.ellipse(img, (1350, 350), (290, 290), 0, 33.75, 45, (b[36], g[36], r[36]), -1)
-        cv2.ellipse(img, (1350, 350), (290, 290), 0, 45, 56.25, (b[38], g[38], r[38]), -1)
-        cv2.ellipse(img, (1350, 350), (290, 290), 0, 56.25, 67.5, (b[37], g[37], r[37]), -1)
-        cv2.ellipse(img, (1350, 350), (290, 290), 0, 67.5, 78.75, (b[39], g[39], r[39]), -1)
-        cv2.ellipse(img, (1350, 350), (290, 290), 0, 78.75, 90, (b[33], g[33], r[33]), -1)
-
-        # ## 3 Cercle ajouté  ##
-        cv2.ellipse(img, (1350, 350), (230, 230), 0, 0, 12.85714286, (b[55], g[55], r[55]), -1)
-        cv2.ellipse(img, (1350, 350), (230, 230), 0, 12.85714286, 25.71428571, (b[54], g[54], r[54]), -1)
-        cv2.ellipse(img, (1350, 350), (230, 230), 0, 25.71428571, 38.57142857, (b[53], g[53], r[53]), -1)
-        cv2.ellipse(img, (1350, 350), (230, 230), 0, 38.57142857, 51.42857143, (b[52], g[52], r[52]), -1)
-        cv2.ellipse(img, (1350, 350), (230, 230), 0, 51.42857143, 64.28571429, (b[41], g[41], r[41]), -1)
-        cv2.ellipse(img, (1350, 350), (230, 230), 0, 64.28571429, 77.14285715, (b[42], g[42], r[42]), -1)
-        cv2.ellipse(img, (1350, 350), (230, 230), 0, 77.14285715, 90, (b[40], g[40], r[40]), -1)
-
-        # ## 4 Cercle ajouté  ##
-        cv2.ellipse(img, (1350, 350), (170, 170), 0, 0, 18, (b[46], g[46], r[46]), -1)
-        cv2.ellipse(img, (1350, 350), (170, 170), 0, 18, 36, (b[47], g[47], r[47]), -1)
-        cv2.ellipse(img, (1350, 350), (170, 170), 0, 36, 54, (b[51], g[51], r[51]), -1)
-        cv2.ellipse(img, (1350, 350), (170, 170), 0, 54, 72, (b[50], g[50], r[50]), -1)
-        cv2.ellipse(img, (1350, 350), (170, 170), 0, 72, 90, (b[43], g[43], r[43]), -1)
-
-        # ## 5 Cercle ajouté  ##
-        cv2.ellipse(img, (1350, 350), (110, 110), 0, 0, 30, (b[45], g[45], r[45]), -1)
-        cv2.ellipse(img, (1350, 350), (110, 110), 0, 30, 60, (b[44], g[44], r[44]), -1)
-        cv2.ellipse(img, (1350, 350), (110, 110), 0, 60, 90, (b[59], g[59], r[59]), -1)
-
-        # ## 6 Cercle ajouté  ##
-        cv2.ellipse(img, (1350, 350), (50, 50), 0, 0, 90, (b[58], g[58], r[58]), -1)
-
-        # #############################################################
-        # #                 Le 3eme Quadrant Sup_gauche               #
-        # #############################################################
-        #
-        # ## 1 Cercle ajouté  ##
-        cv2.ellipse(img, (1350, 350), (350, 350), -90, 0, -11.25, (b[98], g[98], r[98]), -1)
-        cv2.ellipse(img, (1350, 350), (350, 350), -90, -11.25, -22.5, (b[96], g[96], r[96]), -1)
-        cv2.ellipse(img, (1350, 350), (350, 350), -90, -22.5, -33.75, (b[99], g[99], r[99]), -1)
-        cv2.ellipse(img, (1350, 350), (350, 350), -90, -33.75, -45, (b[112], g[112], r[112]), -1)
-        cv2.ellipse(img, (1350, 350), (350, 350), -90, -45, -56.25, (b[125], g[125], r[125]), -1)
-        cv2.ellipse(img, (1350, 350), (350, 350), -90, -56.25, -67.5, (b[127], g[127], r[127]), -1)
-        cv2.ellipse(img, (1350, 350), (350, 350), -90, -67.5, -78.75, (b[124], g[124], r[124]), -1)
-        cv2.ellipse(img, (1350, 350), (350, 350), -90, -78.75, -90, (b[126], g[126], r[126]), -1)
-
-        # ## 2 Cercle ajouté  ##
-        cv2.ellipse(img, (1350, 350), (290, 290), -90, 0, -11.25, (b[97], g[97], r[97]), -1)
-        cv2.ellipse(img, (1350, 350), (290, 290), -90, -11.25, -22.5, (b[103], g[103], r[103]), -1)
-        cv2.ellipse(img, (1350, 350), (290, 290), -90, -22.5, -33.75, (b[101], g[101], r[101]), -1)
-        cv2.ellipse(img, (1350, 350), (290, 290), -90, -33.75, -45, (b[102], g[102], r[102]), -1)
-        cv2.ellipse(img, (1350, 350), (290, 290), -90, -45, -56.25, (b[100], g[100], r[100]), -1)
-        cv2.ellipse(img, (1350, 350), (290, 290), -90, -56.25, -67.5, (b[113], g[113], r[113]), -1)
-        cv2.ellipse(img, (1350, 350), (290, 290), -90, -67.5, -78.75, (b[121], g[121], r[121]), -1)
-        cv2.ellipse(img, (1350, 350), (290, 290), -90, -78.75, -90, (b[120], g[120], r[120]), -1)
-        #
-        # ## 3 Cercle ajouté  ##
-        cv2.ellipse(img, (1350, 350), (230, 230), -90, 0, -12.85714286, (b[104], g[104], r[104]), -1)
-        cv2.ellipse(img, (1350, 350), (230, 230), -90, -12.85714286, -25.71428571, (b[106], g[106], r[106]), -1)
-        cv2.ellipse(img, (1350, 350), (230, 230), -90, -25.71428571, -38.57142857, (b[105], g[105], r[105]), -1)
-        cv2.ellipse(img, (1350, 350), (230, 230), -90, -38.57142857, -51.42857143, (b[116], g[116], r[116]), -1)
-        cv2.ellipse(img, (1350, 350), (230, 230), -90, -51.42857143, -64.28571429, (b[117], g[117], r[117]), -1)
-        cv2.ellipse(img, (1350, 350), (230, 230), -90, -64.28571429, -77.14285715, (b[118], g[118], r[118]), -1)
-        cv2.ellipse(img, (1350, 350), (230, 230), -90, -77.14285715, -90, (b[119], g[119], r[119]), -1)
-        #
-        # ## 4 Cercle ajouté  ##
-        cv2.ellipse(img, (1350, 350), (170, 170), -90, 0, -18, (b[107], g[107], r[107]), -1)
-        cv2.ellipse(img, (1350, 350), (170, 170), -90, -18, -36, (b[114], g[114], r[114]), -1)
-        cv2.ellipse(img, (1350, 350), (170, 170), -90, -36, -54, (b[115], g[115], r[115]), -1)
-        cv2.ellipse(img, (1350, 350), (170, 170), -90, -54, -72, (b[111], g[111], r[111]), -1)
-        cv2.ellipse(img, (1350, 350), (170, 170), -90, -72, -90, (b[110], g[110], r[110]), -1)
-        #
-        # ## 5 Cercle ajouté  ##
-        cv2.ellipse(img, (1350, 350), (110, 110), -90, 0, -30, (b[123], g[123], r[123]), -1)
-        cv2.ellipse(img, (1350, 350), (110, 110), -90, -30, -60, (b[108], g[108], r[108]), -1)
-        cv2.ellipse(img, (1350, 350), (110, 110), -90, -60, -90, (b[109], g[109], r[109]), -1)
-        #
-        # ## 6 Cercle rjouté  ##
-        cv2.ellipse(img, (1350, 350), (50, 50), -90, 0, -90, (b[122], g[122], r[122]), -1)
-        #
-        # #############################################################
-        # #                  Le 4eme Quadrant Inf_gauche              #
-        # #############################################################
-        #
-        # ## 1 Cercle ajouté  ##
-        #
-        cv2.ellipse(img, (1350, 350), (350, 350), 90, 0, 11.25, (b[94], g[94], r[94]), -1)
-        cv2.ellipse(img, (1350, 350), (350, 350), 90, 11.25, 22.5, (b[92], g[92], r[92]), -1)
-        cv2.ellipse(img, (1350, 350), (350, 350), 90, 22.5, 33.75, (b[95], g[95], r[95]), -1)
-        cv2.ellipse(img, (1350, 350), (350, 350), 90, 33.75, 45, (b[93], g[93], r[93]), -1)
-        cv2.ellipse(img, (1350, 350), (350, 350), 90, 45, 56.25, (b[80], g[80], r[80]), -1)
-        cv2.ellipse(img, (1350, 350), (350, 350), 90, 56.25, 67.5, (b[67], g[67], r[67]), -1)
-        cv2.ellipse(img, (1350, 350), (350, 350), 90, 67.5, 78.75, (b[64], g[64], r[64]), -1)
-        cv2.ellipse(img, (1350, 350), (350, 350), 90, 78.75, 90, (b[66], g[66], r[66]), -1)
-        #
-        # ## 2 Cercle ajouté  ##
-        cv2.ellipse(img, (1350, 350), (290, 290), 90, 0, 11.25, (b[88], g[88], r[88]), -1)
-        cv2.ellipse(img, (1350, 350), (290, 290), 90, 11.25, 22.5, (b[89], g[89], r[89]), -1)
-        cv2.ellipse(img, (1350, 350), (290, 290), 90, 22.5, 33.75, (b[81], g[81], r[81]), -1)
-        cv2.ellipse(img, (1350, 350), (290, 290), 90, 33.75, 45, (b[68], g[68], r[68]), -1)
-        cv2.ellipse(img, (1350, 350), (290, 290), 90, 45, 56.25, (b[70], g[70], r[70]), -1)
-        cv2.ellipse(img, (1350, 350), (290, 290), 90, 56.25, 67.5, (b[69], g[69], r[69]), -1)
-        cv2.ellipse(img, (1350, 350), (290, 290), 90, 67.5, 78.75, (b[71], g[71], r[71]), -1)
-        cv2.ellipse(img, (1350, 350), (290, 290), 90, 78.75, 90, (b[65], g[65], r[65]), -1)
-        #
-        # ## 3 Cercle ajouté  ##
-        cv2.ellipse(img, (1350, 350), (230, 230), 90, 0, 12.85714286, (b[87], g[87], r[87]), -1)
-        cv2.ellipse(img, (1350, 350), (230, 230), 90, 12.85714286, 25.71428571, (b[86], g[86], r[86]), -1)
-        cv2.ellipse(img, (1350, 350), (230, 230), 90, 25.71428571, 38.57142857, (b[85], g[85], r[85]), -1)
-        cv2.ellipse(img, (1350, 350), (230, 230), 90, 38.57142857, 51.42857143, (b[84], g[84], r[84]), -1)
-        cv2.ellipse(img, (1350, 350), (230, 230), 90, 51.42857143, 64.28571429, (b[73], g[73], r[73]), -1)
-        cv2.ellipse(img, (1350, 350), (230, 230), 90, 64.28571429, 77.14285715, (b[74], g[74], r[74]), -1)
-        cv2.ellipse(img, (1350, 350), (230, 230), 90, 77.14285715, 90, (b[72], g[72], r[72]), -1)
-        #
-        # ## 4 Cercle ajouté  ##
-        cv2.ellipse(img, (1350, 350), (170, 170), 90, 0, 18, (b[78], g[78], r[78]), -1)
-        cv2.ellipse(img, (1350, 350), (170, 170), 90, 18, 36, (b[79], g[79], r[79]), -1)
-        cv2.ellipse(img, (1350, 350), (170, 170), 90, 36, 54, (b[83], g[83], r[83]), -1)
-        cv2.ellipse(img, (1350, 350), (170, 170), 90, 54, 72, (b[82], g[82], r[82]), -1)
-        cv2.ellipse(img, (1350, 350), (170, 170), 90, 72, 90, (b[75], g[75], r[75]), -1)
-        #
-        # ## 5 Cercle ajouté  ##
-        cv2.ellipse(img, (1350, 350), (110, 110), 90, 0, 30, (b[77], g[77], r[77]), -1)
-        cv2.ellipse(img, (1350, 350), (110, 110), 90, 30, 60, (b[76], g[76], r[76]), -1)
-        cv2.ellipse(img, (1350, 350), (110, 110), 90, 60, 90, (b[91], g[91], r[91]), -1)
-        #
-        # ## 6 Cercle rjouté  ##
-        cv2.ellipse(img, (1350, 350), (50, 50), 90, 0, 90, (b[90], g[90], r[90]), -1)
-        #
-
-        #############################################################
-            #                        Show image                         #
-            #############################################################
-            # bicubic_img = cv2.resize(img, None, fx=0.8, fy=0.8, interpolation=cv2.INTER_LINEAR)
-            #
-            # cv2.imshow(' Breast Phantom with LOQ Tumor -OpenCV-', bicubic_img)
-            #
-            # if cv2.waitKey(1) & 0xFF == ord('q'):
-            # break
-
-            # Ajoutez les légendes souhaitées
-        legend1 = "UIQ"
-        legend2 = "UOQ"
-        legend3 = "LIQ"
-        legend4 = "LOQ"
-        legend5 = "RIGHT BREAST"
-        legend1_1 = "UOQ"
-        legend2_2 = "UIQ"
-        legend3_3 = "LOQ"
-        legend4_4 = "LIQ"
-        legend5_5 = "LEFT BREAST"
-            # Paramètres du texte
+        # ==================== Ajouter labels ====================
         font = cv2.FONT_HERSHEY_SIMPLEX
-        font_scale = 0.8
-        color = (0, 0, 0)  # Couleur du texte (noir dans cet exemple)
-        thickness = 2  # Épaisseur du texte
+        font_scale = 0.9
+        color = (0, 0, 0)
+        thickness = 2
+        offset_y = 80
 
-            # Position des légendes
-        legend1_position = (5, 100)  # Coordonnées de la légende 1
-        legend2_position = (630, 100)  # Coordonnées de la légende 2
-        legend3_position = (5, 630)  # Coordonnées de la légende 3
-        legend4_position = (630, 630)  # Coordonnées de la légende 4
-        legend5_position = (250, 750)  # Coordonnées de la légende 5
-        legend1_1_position = (995, 100)  # Coordonnées de la légende 1
-        legend2_2_position = (1630, 100)  # Coordonnées de la légende 2
-        legend3_3_position = (995, 630)  # Coordonnées de la légende 3
-        legend4_4_position = (1630, 630)  # Coordonnées de la légende 4
-        legend5_5_position = (1270, 750)  # Coordonnées de la légende 5
-            # ...
+        # Calculer la largeur du texte pour le centrer
+        text_left = "Cup C Br-Left"
+        text_right = "Cup C Br-Right"
 
-           # Ajoutez les légendes à l'image
-        cv2.putText(img, legend1, legend1_position, font, font_scale, color, thickness, cv2.LINE_AA)
-        cv2.putText(img, legend2, legend2_position, font, font_scale, color, thickness, cv2.LINE_AA)
-        cv2.putText(img, legend3, legend3_position, font, font_scale, color, thickness, cv2.LINE_AA)
-        cv2.putText(img, legend4, legend4_position, font, font_scale, color, thickness, cv2.LINE_AA)
-        cv2.putText(img, legend5, legend5_position, font, font_scale, color, 2, cv2.LINE_AA)
-        cv2.putText(img, legend1_1, legend1_1_position, font, font_scale, color, thickness, cv2.LINE_AA)
-        cv2.putText(img, legend2_2, legend2_2_position, font, font_scale, color, thickness, cv2.LINE_AA)
-        cv2.putText(img, legend3_3, legend3_3_position, font, font_scale, color, thickness, cv2.LINE_AA)
-        cv2.putText(img, legend4_4, legend4_4_position, font, font_scale, color, thickness, cv2.LINE_AA)
-        cv2.putText(img, legend5_5, legend5_5_position, font, font_scale, color, 2, cv2.LINE_AA)
+        (text_width_left, text_height_left), _ = cv2.getTextSize(text_left, font, font_scale, thickness)
+        (text_width_right, text_height_right), _ = cv2.getTextSize(text_right, font, font_scale, thickness)
 
+        # Centrer horizontalement et placer en bas
+        cv2.putText(img, text_left,
+                    (centre_gauche[0] - text_width_left // 2, centre_gauche[1] + max(rayons) + offset_y),
+                    font, font_scale, color, thickness)
+        cv2.putText(img, text_right,
+                    (centre_droit[0] - text_width_right // 2, centre_droit[1] + max(rayons) + offset_y),
+                    font, font_scale, color, thickness)
+
+        # ---------------- Créer une image "propre" pour le zoom (sans annotations d'asymétrie) ----------------
+        img_clean = img_base.copy()
+
+        # Recréer les heatmaps sans les annotations d'asymétrie
+        gz_smooth_g_clean, mask_roi_g_clean, offset_g_clean = render_heatmap_on_image(
+            img_clean, centre_gauche, gx_g, gy_g, gz_g, mask_g, tmin, seuil_chaud_init, gamma=gamma_track)
+        gz_smooth_d_clean, mask_roi_d_clean, offset_d_clean = render_heatmap_on_image(
+            img_clean, centre_droit, gx_d, gy_d, gz_d, mask_d, tmin, seuil_chaud_init, gamma=gamma_track)
+
+        # Dessiner seulement les contours des zones chaudes (pas d'asymétrie)
+        annotations_g_clean = draw_contours_and_boxes(img_clean, centre_gauche, chaud_g, gz_smooth_g_clean,
+                                                      offset_info=offset_g_clean, couleur=(0, 0, 200))
+        annotations_d_clean = draw_contours_and_boxes(img_clean, centre_droit, chaud_d, gz_smooth_d_clean,
+                                                      offset_info=offset_d_clean, couleur=(0, 0, 200))
+
+        # Colorbar centrale pour l'image propre
+        img_clean[y_bar:y_bar + bar_h, x_bar:x_bar + bar_w] = cv2.resize(bar_img, (bar_w, bar_h))
+        cv2.putText(img_clean, f"{tmax:.1f}", (x_bar + bar_w + 10, y_bar + 15),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (10, 10, 10), 2)
+        cv2.putText(img_clean, f"{tmin:.1f}", (x_bar + bar_w + 10, y_bar + bar_h - 5),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (10, 10, 10), 2)
+        cv2.putText(img_clean, "Temp (C)", (x_bar - 15, y_bar - 20),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (20, 20, 20), 2)
+
+        # Overlay anatomique pour l'image propre
+        if overlay_on:
+            draw_anatomical_overlay(img_clean, centre_gauche, max_radius, alpha=0.22)
+            draw_anatomical_overlay(img_clean, centre_droit, max_radius, alpha=0.22)
+
+        # Labels pour l'image propre
+        cv2.putText(img_clean, text_left,
+                    (centre_gauche[0] - text_width_left // 2, centre_gauche[1] + max(rayons) + offset_y),
+                    font, font_scale, color, thickness)
+        cv2.putText(img_clean, text_right,
+                    (centre_droit[0] - text_width_right // 2, centre_droit[1] + max(rayons) + offset_y),
+                    font, font_scale, color, thickness)
+
+        # Stocker l'image propre pour le zoom
+        param_images['img_clean_for_zoom'] = img_clean.copy()
+
+        # ---------------- Panneau info À GAUCHE ----------------
+        panel_width = 500
+        panel_height = 450
+        panel_x = 20
+        panel_y = (screen_height - panel_height) // 2
+
+        draw_info_panel(img, panel_x, panel_y, panel_width, panel_height,
+                        min_g, max_g, mean_g,
+                        min_d, max_d, mean_d,
+                        pct_g, pct_d, asym, seuil,
+                        nb_zones_asym_g, nb_zones_asym_d,
+                        alert)
+
+        # ---------------- Info bas ----------------
+        # cv2.putText(img, "Touches: s=save PNG | c=CSV | o=overlay | q/Esc=quit",
+        #             (20, screen_height - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (30, 30, 30), 2)
+
+        if last_save_time and time.time() - last_save_time < 2.0:
+            cv2.putText(img, "Rapport sauvegarde", (screen_width - 250, 35),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (20, 120, 20), 2)
+
+        param_images['img_for_mouse'] = img.copy()
+
+        #cv2.imshow(win_name, img)
 
         _, img_encoded = cv2.imencode('.png', img)
         img_data = img_encoded.tobytes()
@@ -971,36 +1387,64 @@ def thermal_image():
 
         return str(e), 500
 
+
 @app.route('/upload_video', methods=['POST'])
 def upload_video():
     patient_id = request.args.get('patient_id')
     video_file = request.files.get('video')
 
+    # Vérification des paramètres
     if not video_file or not patient_id:
-        return jsonify({'success': False, 'error': 'No video file provided or patient_id is missing.'}), 400
+        return jsonify({'success': False, 'error': 'Aucun fichier vidéo fourni ou patient_id manquant.'}), 400
 
     # Vérification si l'ID du patient est un entier valide
     try:
         patient_id = int(patient_id)
     except ValueError:
-        return jsonify({'success': False, 'error': 'Invalid patient_id.'}), 400
+        return jsonify({'success': False, 'error': 'patient_id invalide.'}), 400
 
-    timestamp = int(time.time() * 500)
-    # Créez le nom de fichier en fonction de l'ID du patient et du timestamp
+    # Crée un timestamp pour le nom de fichier
+    timestamp = int(time.time() * 1000)
     video_filename = f"{patient_id}_{timestamp}.webm"
-    # Sauvegardez dans le dossier UPLOAD_FOLDER_videos
-    try:
-        # Sauvegarde du fichier vidéo à cet emplacement
-        video_file.save(os.path.join(app.config['UPLOAD_FOLDER_videos'], video_filename))
 
-        # Crée un nouveau diagnostic pour le patient
-        new_diagnostic = Diagnostic(patient_id=patient_id, type='Vidéo', date=datetime.utcnow(), file=video_filename)
+    # Définit le dossier de destination
+    upload_path = app.config.get('UPLOAD_FOLDER_videos', None)
+    if not upload_path:
+        return jsonify({'success': False, 'error': 'Le dossier de destination n\'est pas configuré.'}), 500
+
+    # Crée le dossier si il n'existe pas
+    if not os.path.exists(upload_path):
+        try:
+            os.makedirs(upload_path)
+        except Exception as e:
+            return jsonify({'success': False, 'error': f"Impossible de créer le dossier: {str(e)}"}), 500
+
+    # Chemin complet du fichier
+    file_path = os.path.join(upload_path, video_filename)
+    print("Chemin final du fichier:", file_path)  # Pour debug
+
+    # Sauvegarde du fichier et ajout en base
+    try:
+        video_file.save(file_path)
+
+        # Crée un nouveau diagnostic
+        new_diagnostic = Diagnostic(
+            patient_id=patient_id,
+            type='Vidéo',
+            date=datetime.utcnow(),
+            file=video_filename
+        )
         db.session.add(new_diagnostic)
         db.session.commit()
 
-        return jsonify(success=True, filename=video_filename, date=datetime.utcnow().strftime('%d/%m/%Y %H:%M'))
+        return jsonify({
+            'success': True,
+            'filename': video_filename,
+            'date': datetime.utcnow().strftime('%d/%m/%Y %H:%M')
+        })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
 
 @app.route('/consultation', methods=['GET', 'POST'])
 def consultation():
@@ -1094,5 +1538,6 @@ if __name__ == '__main__':
 
      with app.app_context():
          db.create_all()  # Créer les tables
+     socketio.run(app,host='192.168.43.37', port=5000)
 
-     socketio.run(app,host='10.2.28.39', port=5000)
+     #socketio.run(app,host='0.0.0.0', port=5000)

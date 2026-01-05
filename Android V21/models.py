@@ -3,6 +3,9 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from flask_login import UserMixin
+# Dans models.py, modifiez la classe Diagnostic
+import json
+from sqlalchemy import Text
 
 db = SQLAlchemy()
 
@@ -90,7 +93,7 @@ class Diagnostic(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     type = db.Column(db.String(100), nullable=False)
     date = db.Column(db.DateTime, default=datetime.utcnow)
-    file = db.Column(db.String(100), nullable=True)
+    file = db.Column(db.String(255), default="")  # Add default=""
 
     # Clé étrangère pour associer un patient
     patient_id = db.Column(db.Integer, db.ForeignKey('patients.id'), nullable=False)
@@ -103,8 +106,19 @@ class Diagnostic(db.Model):
 
     # Relation pour les commentaires des patients
     commentaires_patient = db.relationship('CommentairePatient', back_populates='diagnostic', cascade='all, delete-orphan')
-    sensor_data = db.Column(db.String, nullable=True)
+    #sensor_data = db.Column(db.String, nullable=True)
+    sensor_data = db.Column(Text, nullable=True)  # Stocke les données sous forme de JSON string
 
+    # Ajoutez des propriétés pour faciliter l'accès
+    @property
+    def sensor_data_list(self):
+        if self.sensor_data:
+            return json.loads(self.sensor_data)
+        return []
+
+    @sensor_data_list.setter
+    def sensor_data_list(self, value):
+        self.sensor_data = json.dumps(value) if value else None
 
 class CommentairePatient(db.Model):
     __tablename__ = 'commentaire_patient'

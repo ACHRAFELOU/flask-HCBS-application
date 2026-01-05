@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thermographie Mammaire</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 95%;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(90deg, #1a237e, #0d47a1);
+            color: white;
+            padding: 25px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 300;
+        }
+
+        .header h1 i {
+            margin-right: 15px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-start {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-stop {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-save {
+            background: #2196F3;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .main-content {
+            display: flex;
+            min-height: 700px;
+        }
+
+        .image-section {
+            flex: 3;
+            padding: 20px;
+            background: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .thermo-image {
+            max-width: 100%;
+            max-height: 650px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .info-section {
+            flex: 1;
+            background: #ffffff;
+            padding: 30px;
+            border-left: 1px solid #e0e0e0;
+            overflow-y: auto;
+        }
+
+        .info-section h2 {
+            color: #1a237e;
+            margin-bottom: 25px;
+            font-size: 22px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 10px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .metric-card h3 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .metric-card .value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .alert-box {
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+
+        .alert-box.normal {
+            background: #e8f5e8;
+            border-left-color: #4CAF50;
+        }
+
+        .connection-form {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group select,
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ccc;
+        }
+
+        .status-dot.active {
+            background: #4CAF50;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .data-table th {
+            background: #f5f5f5;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-thermometer-half"></i> Thermographie Mammaire</h1>
+            <div class="controls">
+                <button class="btn btn-start" onclick="startThermo()">
+                    <i class="fas fa-play"></i> Démarrer
+                </button>
+                <button class="btn btn-stop" onclick="stopThermo()">
+                    <i class="fas fa-stop"></i> Arrêter
+                </button>
+                <button class="btn btn-save" onclick="saveData()">
+                    <i class="fas fa-save"></i> Sauvegarder
+                </button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="image-section">
+                <img id="thermoImage" class="thermo-image" src="" alt="Image thermographique">
+            </div>
+
+            <div class="info-section">
+                <div class="status-indicator">
+                    <div id="statusDot" class="status-dot"></div>
+                    <span id="statusText">Déconnecté</span>
+                </div>
+
+                <div class="connection-form">
+                    <h2>Configuration</h2>
+                    <div class="form-group">
+                        <label for="portSelect">Port Série</label>
+                        <select id="portSelect" class="form-control">
+                            <option value="">Chargement des ports...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="patientSelect">Patient</label>
+                        <select id="patientSelect" class="form-control">
+                            <option value="">Sélectionner un patient</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="baudRate">Baud Rate</label>
+                        <select id="baudRate" class="form-control">
+                            <option value="9600">9600</option>
+                            <option value="115200" selected>115200</option>
+                            <option value="57600">57600</option>
+                        </select>
+                    </div>
+                </div>
+
+                <h2>Analyse Thermique</h2>
+                <div id="alertBox" class="alert-box">
+                    En attente de données...
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <h3>Température Min (G)</h3>
+                        <div class="value" id="minG">-- °C</div>
+                    </div>
+                    <div class="metric-card">
+                        <h3>Température Max (G)</h3>
+                        <div class="value" id="maxG">-- °C</div>
+                    </div>
+                    <div class="metric-card">
+                        <h3>Température Min (D)</h3>
+                        <div class="value" id="minD">-- °C</div>
+                    </div>
+                    <div class="metric-card">
+                        <h3>Température Max (D)</h3>
+                        <div class="value" id="maxD">-- °C</div>
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <h3>Asymétrie Thermique</h3>
+                    <div class="value" id="asym">-- °C</div>
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <h3>Commentaire</h3>
+                    <textarea id="comment" class="form-control" rows="3" placeholder="Ajouter un commentaire..."></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+        const socket = io('/thermo');
+        let currentPatientId = null;
+
+        // Gestion des événements SocketIO
+        socket.on('connect', () => {
+            console.log('Connecté au serveur thermo');
+            updateStatus(true, 'Connecté');
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Déconnecté du serveur thermo');
+            updateStatus(false, 'Déconnecté');
+        });
+
+        socket.on('thermo_update', (data) => {
+            console.log('Nouvelles données thermo reçues');
+            updateThermoImage(data.image);
+            updateMetrics(data.metrics);
+            currentPatientId = data.patient_id;
+        });
+
+        // Chargement initial
+        document.addEventListener('DOMContentLoaded', () => {
+            loadAvailablePorts();
+            loadPatients();
+            checkThermoStatus();
+        });
+
+        async function loadAvailablePorts() {
+            try {
+                const response = await fetch('/api/ports');
+                const ports = await response.json();
+                const select = document.getElementById('portSelect');
+                select.innerHTML = '<option value="">Sélectionner un port</option>';
+                ports.forEach(port => {
+                    const option = document.createElement('option');
+                    option.value = port;
+                    option.textContent = port;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Erreur lors du chargement des ports:', error);
+            }
+        }
+
+        async function loadPatients() {
+            try {
+                // Récupérer la liste des patients depuis l'API
+                const response = await fetch('/api/patients'); // À créer si nécessaire
+                const patients = await response.json();
+                const select = document.getElementById('patientSelect');
+                select.innerHTML = '<option value="">Sélectionner un patient</option>';
+                patients.forEach(patient => {
+                    const option = document.createElement('option');
+                    option.value = patient.id;
+                    option.textContent = `${patient.first_name} ${patient.last_name}`;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Erreur lors du chargement des patients:', error);
+            }
+        }
+
+        async function startThermo() {
+            const port = document.getElementById('portSelect').value;
+            const patientId = document.getElementById('patientSelect').value;
+            const baudRate = document.getElementById('baudRate').value;
+
+            if (!port || !patientId) {
+                alert('Veuillez sélectionner un port et un patient');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/thermo/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        port: port,
+                        patient_id: patientId,
+                        baud_rate: baudRate
+                    })
+                });
+
+                const result = await response.json();
+                if (result.status === 'started') {
+                    alert('Acquisition démarrée avec succès');
+                    updateStatus(true, 'Acquisition en cours');
+                } else {
+                    alert('Erreur: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors du démarrage de l\'acquisition');
+            }
+        }
+
+        async function stopThermo() {
+            try {
+                const response = await fetch('/api/thermo/stop', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                const result = await response.json();
+                if (result.status === 'stopped') {
+                    alert('Acquisition arrêtée');
+                    updateStatus(false, 'Arrêté');
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de l\'arrêt de l\'acquisition');
+            }
+        }
+
+        async function saveData() {
+            if (!currentPatientId) {
+                alert('Aucune donnée à sauvegarder');
+                return;
+            }
+
+            const comment = document.getElementById('comment').value;
+
+            try {
+                const response = await fetch('/api/thermo/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        patient_id: currentPatientId,
+                        comment: comment
+                    })
+                });
+
+                const result = await response.json();
+                if (result.status === 'success') {
+                    alert('Données sauvegardées avec succès');
+                } else {
+                    alert('Erreur: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la sauvegarde');
+            }
+        }
+
+        async function checkThermoStatus() {
+            try {
+                const response = await fetch('/api/thermo/status');
+                const status = await response.json();
+
+                if (status.running) {
+                    updateStatus(true, 'Acquisition en cours');
+                }
+
+                if (status.metrics) {
+                    updateMetrics(status.metrics);
+                }
+            } catch (error) {
+                console.error('Erreur lors de la vérification du statut:', error);
+            }
+        }
+
+        function updateStatus(connected, text) {
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+
+            statusDot.className = 'status-dot' + (connected ? ' active' : '');
+            statusText.textContent = text;
+        }
+
+        function updateThermoImage(imageData) {
+            const img = document.getElementById('thermoImage');
+            img.src = 'data:image/png;base64,' + imageData;
+        }
+
+        function updateMetrics(metrics) {
+            if (!metrics) return;
+
+            // Mettre à jour les valeurs
+            document.getElementById('minG').textContent = metrics.left?.min?.toFixed(1) + ' °C' || '-- °C';
+            document.getElementById('maxG').textContent = metrics.left?.max?.toFixed(1) + ' °C' || '-- °C';
+            document.getElementById('minD').textContent = metrics.right?.min?.toFixed(1) + ' °C' || '-- °C';
+            document.getElementById('maxD').textContent = metrics.right?.max?.toFixed(1) + ' °C' || '-- °C';
+            document.getElementById('asym').textContent = metrics.asym?.toFixed(2) + ' °C' || '-- °C';
+
+            // Mettre à jour l'alerte
+            const alertBox = document.getElementById('alertBox');
+            if (metrics.alert) {
+                alertBox.className = 'alert-box';
+                alertBox.innerHTML = '<i class="fas fa-exclamation-triangle"></i> <strong>ALERTE</strong> - Suspicion détectée. Examens complémentaires requis.';
+            } else {
+                alertBox.className = 'alert-box normal';
+                alertBox.innerHTML = '<i class="fas fa-check-circle"></i> <strong>NORMAL</strong> - Profil thermique dans les normes.';
+            }
+        }
+
+        // Actualiser l'image périodiquement
+        setInterval(() => {
+            socket.emit('request_update');
+        }, 1000);
+    </script>
+</body>
+</html>

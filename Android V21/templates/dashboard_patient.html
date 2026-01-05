@@ -14,7 +14,6 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-icons.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/templatemo-kind-heart-charity.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 
 
         <style>
@@ -628,8 +627,13 @@
         <td>{{ diagnostic.date.strftime('%d/%m/%Y %H:%M') }}</td>
    <td>
                             {% if diagnostic.file.endswith('.mp4') or diagnostic.file.endswith('.webm') %}
-                                <a href="#" data-toggle="modal" data-target="#videoModal" onclick="setVideoSource('{{ url_for('static', filename='uploads/videos/' + diagnostic.file) }}')"style="color: #c71585;">
-    <i class="fas fa-eye"></i> Voir la consultation</a>
+<a href="#" class="view-video" data-video="{{ url_for('static', filename='uploads/videos/' + diagnostic.file) }}" style="color: #c71585;">
+    <i class="fas fa-eye"></i> Voir la consultation
+</a>
+
+
+
+
                             {% else %}
                                 <a href="{{ url_for('static', filename='uploads/document/' + diagnostic.file) }}" style="color: #c71585;"> <i class="fas fa-eye"></i> Voir le document</a>
                             {% endif %}
@@ -665,6 +669,8 @@
         </td>
     </tr>
     {% endfor %}
+
+
 </tbody>
 
             </table>
@@ -672,6 +678,7 @@
     </div>
 
         <!-- Modal pour l'image thermique -->
+<!-- Modal pour l'image thermique et enregistrement vidéo -->
 <div class="modal fade" id="thermalImageModal" tabindex="-1" aria-labelledby="thermalImageModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
@@ -694,19 +701,18 @@
     </div>
 </div>
 
+
 <!-- Modal pour la vidéo -->
 <div class="modal fade" id="videoModal" tabindex="-1" aria-labelledby="videoModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="videoModalLabel">Visionner la Vidéo</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <h5 class="modal-title">Visionner la Vidéo</h5>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
             </div>
             <div class="modal-body text-center">
-                <video id="videoPlayer" class="w-100" controls style="max-width: 100%; height: auto;">
-                    <source id="videoSource" src="" type="video/mp4">
+                <video id="videoPlayer" class="w-100" controls>
+                    <source id="videoSource" src="" type="video/webm">
                     Votre navigateur ne prend pas en charge la lecture des vidéos.
                 </video>
             </div>
@@ -716,11 +722,11 @@
         </div>
     </div>
 </div>
+
+        <!-- JS VIDEO + THERMAL IMAGE -->
 <script>
     let patientId = '{{ patient.id }}';
     let port = '';
-    const imgElement = document.getElementById('thermalImage');
-
     let mediaRecorder;
     let recordedChunks = [];
     let canvas = document.getElementById('thermalCanvas');
@@ -746,8 +752,6 @@
                 }
             })
             .catch(error => console.error('Erreur lors de la récupération des ports:', error));
-            document.getElementById('thermalImage').src = '/static/images/default_image.png';
-
     }
 
     function updateSelectedValues() {
@@ -756,7 +760,7 @@
     }
 
     function startFetchingThermalImage() {
-        fetchInterval = setInterval(fetchThermalImage, 100); // Mettre à jour l'image toutes les secondes
+        fetchInterval = setInterval(fetchThermalImage, 1000); // Mettre à jour l'image toutes les secondes
     }
 
     function stopFetchingThermalImage() {
@@ -774,6 +778,7 @@
             })
             .then(imageBlob => {
                 const imageObjectURL = URL.createObjectURL(imageBlob);
+                const imgElement = document.getElementById('thermalImage');
                 imgElement.src = imageObjectURL;
 
                 // Dessiner l'image sur le canvas en temps réel
@@ -793,10 +798,10 @@
 
     document.getElementById('start-recording').onclick = function() {
         // Configurer le canvas et le contexte pour le flux d'enregistrement
-        canvas.width = imgElement.width;
-        canvas.height = imgElement.height;
+        canvas.width = 1800;
+        canvas.height = 980;
 
-        const stream = canvas.captureStream(60); // 60 FPS
+        const stream = canvas.captureStream(20); // 30 FPS
         mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
 
         mediaRecorder.ondataavailable = function(event) {
@@ -806,7 +811,6 @@
         };
 
         mediaRecorder.onstop = function() {
-
             const blob = new Blob(recordedChunks, { type: 'video/webm' });
             // Création d'un FormData pour téléverser la vidéo
             let formData = new FormData();
@@ -848,9 +852,6 @@
         }
     };
 </script>
-
-
-
         <script>
             function setVideoSource(source) {
                 document.getElementById('videoSource').src = source;
@@ -883,11 +884,38 @@
         </div>
     </div>
 </footer>
-   <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
- <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
 
+<script>
+$(document).ready(function(){
+    // Quand on clique sur "Voir la consultation"
+    $(document).on('click', '.view-video', function(e){
+        e.preventDefault(); // empêche le saut en haut de page
+
+        var src = $(this).data('video'); // récupère le chemin de la vidéo
+        var video = $('#videoPlayer');
+
+        // Mettre la source de la vidéo
+        $('#videoSource').attr('src', src);
+
+        // Recharger la vidéo et lancer la lecture
+        video[0].load();
+        video[0].play();
+
+        // Ouvrir le modal
+        $('#videoModal').modal('show');
+    });
+
+    // Quand le modal se ferme, réinitialiser la vidéo
+    $('#videoModal').on('hidden.bs.modal', function () {
+        $('#videoSource').attr('src', '');
+        var video = $('#videoPlayer');
+        video[0].pause();
+        video[0].currentTime = 0;
+    });
+});
+</script>
 
     </body>
 </html>
