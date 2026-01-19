@@ -17,6 +17,29 @@
 
 
         <style>
+        /* Style pour le message d'information */
+.alert-info {
+    background-color: #e6f2ff;
+    border-color: #b3d9ff;
+    color: #004085;
+}
+
+/* Style pour le label optionnel */
+.text-muted small {
+    font-size: 0.85em;
+}
+
+/* Style pour l'option "Aucun médecin" */
+option[value=""] {
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Style pour l'option d'erreur */
+option:disabled {
+    color: #dc3545;
+    font-style: italic;
+}
         body {
             background-color: #f8f9fa;
             background-image: url('{{ url_for('static', filename='images/background-breast-cancer1 - Copie.jpg') }}');
@@ -513,7 +536,12 @@
             <h2 class="mt-3">Inscription Patient</h2>
 
         </div>
-
+<div class="alert alert-info mt-4 mb-4">
+    <i class="fas fa-info-circle me-2"></i>
+    <strong>Information importante :</strong>
+    Vous pouvez vous inscrire sans médecin et en choisir un plus tard depuis votre tableau de bord.
+    Cela vous permet de sélectionner le médecin qui vous convient le mieux.
+</div>
 
         <form action="{{ url_for('register_patient') }}" method="POST" enctype="multipart/form-data" class="p-4 border rounded bg-light shadow-sm">
             <p class="text-muted text-center"><strong>Veuillez remplir les informations ci-dessous :</strong></p>
@@ -563,13 +591,16 @@
                 <input type="file" id="photo" name="photo" class="form-control-file" accept="image/*" onchange="previewProfileImage(event)" required>
             </div>
 
-            <div class="form-group">
-                <label for="medecin"><i class="fas fa-user-md"></i> Médecin (proche de votre ville):</label>
-                <select id="medecin" name="medecin" class="form-control" required>
-                    <option value="">Sélectionnez un médecin</option>
-                </select>
-            </div>
-
+<div class="form-group">
+    <label for="medecin"><i class="fas fa-user-md"></i> Médecin (optionnel):</label>
+    <select id="medecin" name="medecin" class="form-control">
+        <option value="">Sélectionnez un médecin (optionnel)</option>
+        <option value="">Je choisirai plus tard</option>
+    </select>
+    <small class="text-muted">
+        <i class="fas fa-info-circle"></i> Vous pouvez choisir un médecin maintenant ou plus tard depuis votre tableau de bord.
+    </small>
+</div>
             <button type="submit" class="btn btn-primary btn-block"><i class="fas fa-user-plus"></i> S'inscrire</button>
         </form>
     </div>

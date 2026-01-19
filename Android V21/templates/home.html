@@ -3,318 +3,1415 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="">
-    <meta name="author" content="">
-    <title>HealthCare Bra System - HCBS</title>
+    <meta name="description" content="HealthCare Bra System - Portail d'authentification sécurisé pour patients et médecins">
+    <meta name="author" content="HCBS Team">
+    <title>HCBS | Portail d'authentification</title>
 
     <!-- CSS FILES -->
     <link href="static/css/bootstrap.min.css" rel="stylesheet">
     <link href="static/css/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Template CSS -->
     <link href="static/css/templatemo-kind-heart-charity.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
     <style>
-        body {
-            background-color: #f8f9fa;
-            background-image: url('{{ url_for('static', filename='images/background-breast-cancer.jpg') }}');
-            background-size: cover;
-            background-repeat: no-repeat;
-            background-position: center;
+        :root {
+            /* Palette de couleurs médicales douces et professionnelles */
+            --rose-tres-clair: #fff0f5;
+            --rose-douce: #ffb6c1;
+            --rose-moyen: #ff91a4;
+            --rose-vif: #ff6b8b;
+            --rose-medical: #ff4081;
+            --bleu-medical: #4fc3f7;
+            --vert-medical: #81c784;
+            --blanc: #ffffff;
+            --blanc-creme: #fffaf5;
+            --gris-tres-clair: #f8f9fa;
+            --gris-clair: #e9ecef;
+            --gris-moyen: #ced4da;
+            --text-fonce: #424242;
+            --text-moyen: #666666;
+            --text-clair: #868e96;
+
+            /* Nouvelles variables pour l'accessibilité */
+            --rose-fonce: #d81b60;
+            --bleu-fonce: #0288d1;
+            --contrast-ratio: 4.5;
+
+            /* Effets améliorés */
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 20px rgba(0,0,0,0.1);
+            --shadow-lg: 0 8px 40px rgba(255, 64, 129, 0.15);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --border-radius: 16px;
         }
-        .card {
-            transition: transform 0.2s;
-            border: 1px solid #ff69b4;
-            background-color: rgba(255, 255, 255, 0.3);
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        .card:hover {
-            transform: scale(1.05);
+
+        html, body {
+            height: 100%;
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--rose-tres-clair) 0%, #fff8f8 50%, #f0f8ff 100%);
+            color: var(--text-fonce);
+            overflow-x: hidden;
+            line-height: 1.6;
         }
-        .avatar {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            margin-bottom: 15px;
-            border: 2px solid #ff69b4;
+
+        /* Focus visible pour accessibilité */
+        :focus-visible {
+            outline: 3px solid var(--rose-medical);
+            outline-offset: 2px;
         }
-        .header-title {
-            color: #343a40;
-            font-weight: bold;
-            margin-bottom: 5px;
-            text-shadow: 1px 1px #000;
+
+        /* Arrière-plan amélioré avec performance */
+        .medical-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                radial-gradient(circle at 10% 20%, rgba(255, 182, 193, 0.08) 2px, transparent 2px),
+                radial-gradient(circle at 90% 40%, rgba(79, 195, 247, 0.05) 2px, transparent 2px);
+            background-size: 200px 200px, 250px 250px;
+            z-index: -1;
+            pointer-events: none;
         }
-        .sub-title {
-            color: #e83e8c;
-            font-weight: bold;
-            font-size: 1.5em;
-            margin-bottom: 20px;
+
+        /* Bannière de sensibilisation améliorée */
+        .awareness-banner {
+            background: linear-gradient(135deg, var(--rose-medical) 0%, var(--rose-vif) 100%);
+            color: var(--blanc);
+            padding: 16px 0;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 2px 15px rgba(255, 64, 129, 0.25);
+            border-bottom: 3px solid rgba(255, 255, 255, 0.2);
         }
-        .card-header {
+
+        .awareness-content {
             display: flex;
-            flex-direction: column;
             align-items: center;
-            background-color: rgba(255, 228, 225, 0.2);
+            justify-content: center;
+            gap: 20px;
+            font-weight: 600;
+            font-size: 1rem;
+            letter-spacing: 0.3px;
+            flex-wrap: wrap;
+            text-align: center;
         }
+
+        .awareness-content i {
+            animation: pulse 2s infinite ease-in-out;
+            font-size: 1.2rem;
+        }
+
+        /* Navigation améliorée */
+        .navbar {
+            background: linear-gradient(to bottom, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.95) 100%);
+            backdrop-filter: blur(10px);
+            box-shadow: var(--shadow-sm);
+            padding: 1rem 0;
+            border-bottom: 1px solid rgba(233, 236, 239, 0.5);
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            color: var(--rose-medical);
+            transition: var(--transition);
+        }
+
+        .navbar-brand:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        /* Section d'authentification principale */
+        .auth-main {
+            min-height: calc(100vh - 180px);
+            display: flex;
+            align-items: center;
+            padding: 60px 0;
+            position: relative;
+        }
+
+        /* En-tête de bienvenue amélioré */
+        .auth-header {
+            text-align: center;
+            margin-bottom: 80px;
+            position: relative;
+        }
+
+        .auth-title {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 800;
+            font-size: 3.2rem;
+            background: linear-gradient(135deg, var(--rose-medical) 0%, var(--rose-vif) 50%, var(--bleu-medical) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 20px;
+            line-height: 1.1;
+            letter-spacing: -0.5px;
+            position: relative;
+            display: inline-block;
+        }
+
+        .auth-title::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 4px;
+            background: linear-gradient(to right, var(--rose-medical), var(--bleu-medical));
+            border-radius: 2px;
+        }
+
+        .auth-subtitle {
+            color: var(--text-moyen);
+            font-size: 1.2rem;
+            max-width: 700px;
+            margin: 30px auto 0;
+            line-height: 1.7;
+            font-weight: 400;
+        }
+
+        /* Cartes d'authentification améliorées */
+        .auth-card-wrapper {
+            perspective: 1200px;
+            margin-bottom: 2rem;
+        }
+
+        .auth-card {
+            background: linear-gradient(145deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.98) 100%);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+            transition: var(--transition);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            height: 100%;
+            position: relative;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            transform-style: preserve-3d;
+        }
+
+        .auth-card:hover {
+            transform: translateY(-12px) rotateX(3deg) scale(1.02);
+            box-shadow: var(--shadow-lg), 0 15px 50px rgba(0,0,0,0.1);
+        }
+
+        .auth-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, var(--rose-medical), var(--rose-vif), var(--bleu-medical));
+            z-index: 2;
+        }
+
+        .card-patient::before {
+            background: linear-gradient(90deg, var(--rose-medical), var(--rose-vif));
+        }
+
+        .card-doctor::before {
+            background: linear-gradient(90deg, var(--bleu-medical), #2b9bd2);
+        }
+
+        .card-header {
+            padding: 50px 40px 40px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.6);
+            border-bottom: 1px solid rgba(233, 236, 239, 0.3);
+            position: relative;
+        }
+
+        .avatar-container {
+            width: 140px;
+            height: 140px;
+            margin: 0 auto 30px;
+            position: relative;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .avatar {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 5px solid var(--blanc);
+            box-shadow: var(--shadow-md), inset 0 0 20px rgba(0,0,0,0.1);
+            background: linear-gradient(135deg, var(--rose-douce) 0%, var(--rose-moyen) 100%);
+            padding: 10px;
+            transition: var(--transition);
+        }
+
+        .avatar-doctor .avatar {
+            background: linear-gradient(135deg, var(--bleu-medical) 0%, #2b9bd2 100%);
+        }
+
+        .avatar-icon {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            border: 4px solid var(--blanc);
+            box-shadow: var(--shadow-sm);
+            color: var(--blanc);
+            z-index: 3;
+        }
+
+        .avatar-patient .avatar-icon {
+            background: var(--rose-medical);
+        }
+
+        .avatar-doctor .avatar-icon {
+            background: var(--bleu-medical);
+        }
+
+        .card-title {
+            font-weight: 800;
+            font-size: 1.8rem;
+            margin-bottom: 12px;
+            color: var(--text-fonce);
+            letter-spacing: -0.3px;
+        }
+
+        .card-subtitle {
+            color: var(--text-moyen);
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        /* Corps de la carte amélioré */
         .card-body {
-            background-color: rgba(255, 250, 240, 0.2);
+            padding: 40px;
+            position: relative;
         }
-        .btn-primary, .btn-info {
-            background-color: #ff69b4;
-            border-color: #ff69b4;
+
+        /* Formulaires améliorés */
+        .auth-form .form-group {
+            margin-bottom: 30px;
+            position: relative;
         }
-        .btn-primary:hover, .btn-info:hover {
-            background-color: #ff1493;
-            border-color: #ff1493;
+
+        .form-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            color: var(--text-fonce);
+            margin-bottom: 12px;
+            font-size: 0.95rem;
+            letter-spacing: 0.3px;
         }
-.card-body {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    height: 100%;
-}
 
-.btn-custom {
-    padding: 10px 20px;
-    font-size: 16px;
-    background-color: #17a2b8; /* Couleur personnalisée */
-    border: none;
-    border-radius: 5px;
-    color: white;
-    font-weight: bold;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
+        .form-label i {
+            color: var(--rose-medical);
+            width: 18px;
+            font-size: 1.1rem;
+        }
 
-.btn-custom:hover {
-    background-color: #138496; /* Couleur au survol */
-}
+        .input-group {
+            position: relative;
+        }
 
-.text-center {
-    display: flex;
-    justify-content: center;
-    width: 100%;
-    margin-top: 15px;
-}
+        .form-control {
+            padding: 18px 20px;
+            border: 2px solid var(--gris-clair);
+            border-radius: 12px;
+            font-size: 1.05rem;
+            transition: var(--transition);
+            background: rgba(248, 249, 250, 0.9);
+            color: var(--text-fonce);
+            font-weight: 500;
+            letter-spacing: 0.3px;
+        }
 
-        .cta-section {
-            background-color: rgba(255, 228, 225, 0.2);
-            padding: 15px;
-            border-radius: 10px;
+        .form-control:focus {
+            border-color: var(--rose-medical);
+            box-shadow: 0 0 0 0.25rem rgba(255, 64, 129, 0.2);
+            background: rgba(255, 255, 255, 0.95);
+            transform: translateY(-2px);
+        }
+
+        .form-control.is-invalid {
+            border-color: #dc3545;
+            background: rgba(220, 53, 69, 0.05);
+        }
+
+        .input-icon {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--rose-medical);
+            pointer-events: none;
+            font-size: 1.2rem;
+        }
+
+        /* Validation visuelle */
+        .valid-feedback, .invalid-feedback {
+            display: none;
+            margin-top: 8px;
+            font-size: 0.85rem;
+            padding-left: 5px;
+        }
+
+        /* Boutons améliorés */
+        .btn-auth {
+            width: 100%;
+            padding: 18px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            border: none;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            letter-spacing: 0.5px;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .btn-auth::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: 0.5s;
+            z-index: -1;
+        }
+
+        .btn-auth:hover::before {
+            left: 100%;
+        }
+
+        .btn-patient {
+            background: linear-gradient(135deg, var(--rose-medical) 0%, var(--rose-vif) 100%);
+            color: var(--blanc);
+        }
+
+        .btn-patient:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(255, 64, 129, 0.35);
+        }
+
+        .btn-doctor {
+            background: linear-gradient(135deg, var(--bleu-medical) 0%, #2b9bd2 100%);
+            color: var(--blanc);
+        }
+
+        .btn-doctor:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(79, 195, 247, 0.35);
+        }
+
+        .btn-register {
+            width: 100%;
+            padding: 16px;
+            border-radius: 12px;
+            font-weight: 700;
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid var(--rose-medical);
+            color: var(--rose-medical);
+            transition: var(--transition);
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            letter-spacing: 0.3px;
+        }
+
+        .btn-register:hover {
+            background: var(--rose-medical);
+            color: var(--blanc);
+            border-color: var(--rose-medical);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(255, 64, 129, 0.2);
+        }
+
+        /* Séparateur optionnel */
+        .separator {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 30px 0;
+            color: var(--text-clair);
+        }
+
+        .separator::before,
+        .separator::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid var(--gris-clair);
+        }
+
+        .separator span {
+            padding: 0 20px;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        /* Liens utilitaires améliorés */
+        .utility-links {
+            text-align: center;
             margin-top: 30px;
+            padding-top: 30px;
+            border-top: 1px solid rgba(233, 236, 239, 0.5);
         }
-        .form-group label {
-            color: rgba(0, 0, 0, 0.9);
-            font-weight: bold;
+
+        .utility-link {
+            color: var(--rose-medical);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            background: rgba(255, 64, 129, 0.05);
         }
-  .welcome-bar {
-    background-color: #f0f0f0; /* Fond clair */
-    color: #333; /* Texte en noir */
-    padding: 15px;
-    text-align: center;
-    font-size: 1.8em;
-    font-family: 'Calibri', 'Times New Roman', serif; /* Polices ajustées */
-    font-weight: bold;
-    text-transform: uppercase; /* Texte en majuscules */
-    border-radius: 8px; /* Bords légèrement arrondis */
-    margin-bottom: 20px;
-    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1); /* Ombre légère */
-}
 
+        .utility-link:hover {
+            color: var(--rose-vif);
+            background: rgba(255, 64, 129, 0.1);
+            text-decoration: none;
+            transform: translateY(-1px);
+        }
 
-        @media (max-width: 576px) {
-            .btn-custom {
-                font-size: 1em;
+        /* Badge hackathon amélioré */
+        .hackathon-badge {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: linear-gradient(135deg, var(--rose-medical) 0%, var(--rose-vif) 100%);
+            color: var(--blanc);
+            padding: 14px 24px;
+            border-radius: 25px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            box-shadow: var(--shadow-lg);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: bounce 3s infinite ease-in-out;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .hackathon-badge:hover {
+            transform: scale(1.05);
+            box-shadow: 0 15px 35px rgba(255, 64, 129, 0.3);
+        }
+
+        /* Footer amélioré */
+        .site-footer {
+            background: linear-gradient(135deg, var(--text-fonce) 0%, #2c2c2c 100%);
+            color: var(--blanc);
+            padding: 80px 0 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .site-footer::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--rose-medical), var(--bleu-medical));
+        }
+
+        .site-footer-title {
+            color: var(--blanc);
+            font-weight: 700;
+            margin-bottom: 25px;
+            font-size: 1.3rem;
+            position: relative;
+            display: inline-block;
+        }
+
+        .site-footer-title::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            width: 40px;
+            height: 3px;
+            background: var(--rose-medical);
+            border-radius: 2px;
+        }
+
+        .footer-menu-link {
+            color: var(--gris-clair);
+            text-decoration: none;
+            transition: var(--transition);
+            display: inline-block;
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+
+        .footer-menu-link:hover {
+            color: var(--blanc);
+            padding-left: 10px;
+            transform: translateX(5px);
+        }
+
+        .site-footer-bottom {
+            background: rgba(0,0,0,0.3);
+            padding: 25px 0;
+            margin-top: 60px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* Animation d'entrée améliorée */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
             }
         }
-        .custom-footer-width {
-            max-width: 600px; /* Ajustez cette valeur selon vos besoins */
-            margin: 0 auto; /* Centre l'élément */
+
+        .auth-card {
+            animation: fadeInUp 0.8s cubic-bezier(0.23, 1, 0.32, 1) both;
         }
-        .card-body {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    height: 100%;
-}
 
-.btn-pink {
-    background-color: #ff69b4; /* Couleur rose */
-    border: none;
-    color: white;
-    padding: 10px 20px;
-    font-size: 16px;
-    font-weight: bold;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
+        .card-patient {
+            animation-delay: 0.1s;
+        }
 
-.btn-pink:hover {
-    background-color: #e55a9e; /* Couleur rose plus foncée au survol */
-}
+        .card-doctor {
+            animation-delay: 0.2s;
+        }
 
-.text-center {
-    display: flex;
-    justify-content: center;
-    width: 100%;
-    margin-top: 15px;
-}
+        /* Notifications */
+        .notification {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            padding: 20px 25px;
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+            z-index: 9999;
+            animation: slideInRight 0.4s ease-out, fadeOut 0.4s ease-out 3.6s forwards;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            max-width: 400px;
+            backdrop-filter: blur(10px);
+        }
 
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+        }
+
+        /* Responsive amélioré */
+        @media (max-width: 1200px) {
+            .auth-title {
+                font-size: 2.8rem;
+            }
+        }
+
+        @media (max-width: 992px) {
+            .auth-title {
+                font-size: 2.4rem;
+            }
+
+            .auth-subtitle {
+                font-size: 1.1rem;
+                padding: 0 30px;
+            }
+
+            .card-header {
+                padding: 40px 30px 30px;
+            }
+
+            .card-body {
+                padding: 30px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .auth-main {
+                padding: 40px 0;
+            }
+
+            .auth-header {
+                margin-bottom: 50px;
+            }
+
+            .auth-title {
+                font-size: 2.2rem;
+            }
+
+            .auth-subtitle {
+                font-size: 1rem;
+                padding: 0 20px;
+            }
+
+            .avatar-container {
+                width: 120px;
+                height: 120px;
+            }
+
+            .avatar-icon {
+                width: 45px;
+                height: 45px;
+                font-size: 1.2rem;
+            }
+
+            .awareness-content {
+                font-size: 0.9rem;
+                gap: 15px;
+            }
+
+            .hackathon-badge {
+                bottom: 20px;
+                right: 20px;
+                padding: 12px 20px;
+                font-size: 0.85rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .auth-title {
+                font-size: 1.8rem;
+            }
+
+            .auth-subtitle {
+                font-size: 0.95rem;
+            }
+
+            .card-title {
+                font-size: 1.5rem;
+            }
+
+            .form-control {
+                padding: 16px;
+            }
+
+            .btn-auth, .btn-register {
+                padding: 16px;
+                font-size: 1rem;
+            }
+
+            .auth-card {
+                margin: 0 10px;
+            }
+
+            .notification {
+                left: 20px;
+                right: 20px;
+                max-width: none;
+                top: 20px;
+            }
+        }
+
+        /* Mode sombre préférences système */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --rose-tres-clair: #1a1a1a;
+                --blanc: #121212;
+                --blanc-creme: #1e1e1e;
+                --gris-tres-clair: #2d2d2d;
+                --gris-clair: #404040;
+                --text-fonce: #e0e0e0;
+                --text-moyen: #b0b0b0;
+            }
+        }
+
+        /* Impression */
+        @media print {
+            .awareness-banner,
+            .hackathon-badge,
+            .utility-links,
+            .navbar,
+            .site-footer {
+                display: none;
+            }
+
+            .auth-card {
+                break-inside: avoid;
+                box-shadow: none;
+                border: 2px solid #000;
+            }
+        }
+
+        /* Loading skeleton pour les images */
+        .avatar.skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Personnalisation du scroll améliorée */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--gris-tres-clair);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(to bottom, var(--rose-medical), var(--rose-vif));
+            border-radius: 5px;
+            border: 2px solid var(--gris-tres-clair);
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(to bottom, var(--rose-vif), var(--rose-medical));
+        }
     </style>
 </head>
-<body id="section_1">
-    <header class="site-header">
+<body>
+
+    <!-- Fond décoratif -->
+    <div class="medical-background"></div>
+
+    <!-- Bannière de sensibilisation -->
+    <div class="awareness-banner" role="alert" aria-label="Message de sensibilisation">
         <div class="container">
-            <div class="row">
-                <div class="col-lg-8 col-12 d-flex flex-wrap">
-                    <p class="d-flex me-4 mb-0">
-                        <i class="bi-geo-alt me-2"></i>
-                        ENSAM RABAT, B.P.، 6207 Avenue des Forces Armées Royales, Rabat 10100, Maroc
-                    </p>
-                    <p class="d-flex mb-0">
-                        <i class="bi-envelope me-2"></i>
-                        <a href="mailto:achraf_elouerghi@um5.ac.ma">
-                            achraf_elouerghi@um5.ac.ma
-                        </a>
-                    </p>
-                </div>
-                <div class="col-lg-3 col-12 ms-auto d-lg-block d-none">
-                    <ul class="social-icon">
-                        <li class="social-icon-item">
-                            <a href="#" class="social-icon-link bi-twitter"></a>
-                        </li>
-                        <li class="social-icon-item">
-                            <a href="#" class="social-icon-link bi-facebook"></a>
-                        </li>
-                        <li class="social-icon-item">
-                            <a href="#" class="social-icon-link bi-instagram"></a>
-                        </li>
-                        <li class="social-icon-item">
-                            <a href="#" class="social-icon-link bi-youtube"></a>
-                        </li>
-                        <li class="social-icon-item">
-                            <a href="#" class="social-icon-link bi-whatsapp"></a>
-                        </li>
-                    </ul>
-                </div>
+            <div class="awareness-content">
+<i class="fas fa-ribbon" style="color: pink;" aria-hidden="true"></i>
+<i class="fas fa-ribbon" style="color: pink;" aria-hidden="true"></i>                <span>Dépistage précoce sauve des vies • Consultez régulièrement votre médecin</span>
+                <i class="fas fa-stethoscope" aria-hidden="true"></i>
             </div>
         </div>
-    </header>
+    </div>
 
-    <nav class="navbar navbar-expand-lg bg-light shadow-lg">
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light" aria-label="Navigation principale">
         <div class="container">
-            <a class="navbar-brand" href="index.html">
-                <img src="static/images/logo.png" class="logo img-fluid" alt="Kind Heart Charity">
-                <span>
-                    HealthCare Bra System - HCBS
-                    <small>Smart Bra</small>
-                </span>
+            <a class="navbar-brand d-flex align-items-center" href="index.html" aria-label="Retour à l'accueil">
+                <img src="static/images/logo.png" class="logo img-fluid me-3" alt="Logo HCBS" height="45" loading="lazy">
+                <div>
+                    <div class="fw-bold" style="color: var(--rose-medical);">HealthCare Bra System</div>
+                    <small class="text-muted">Smart Bra</small>
+                </div>
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Basculer la navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link click-scroll" href="{{ url_for('indexe')}}">Accueil</a>
-                    </li>
-                    <li class="nav-item">
-<a class="nav-link click-scroll" href="{{ url_for('indexe') }}#section_2">Informations</a>
-                    </li>
 
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-lg-center">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('indexe') }}">Accueil</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('indexe') }}#section_2">Informations</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('indexe') }}#section_6">Contact</a>
+                    </li>
+                    <li class="nav-item ms-lg-3">
+                        <a href="{{ url_for('home') }}" class="btn btn-primary px-4 py-2"
+                           style="background: var(--rose-medical); border: none; font-weight: 600;">
+                            <i class="fas fa-sign-in-alt me-2"></i>
+                            Se Connecter
+                        </a>
+                    </li>
                 </ul>
             </div>
         </div>
     </nav>
 
-    <main>
-        <section class="hero-section hero-section-full-height">
-            <div class="container-fluid">
-                <div class="row">
-                    <div class="container mt-5">
-                        <div class="welcome-bar">Bienvenue sur le portail d'authentification</div>
+    <!-- Section d'authentification principale -->
+    <main class="auth-main" role="main">
+        <div class="container">
+            <!-- En-tête -->
+            <div class="auth-header mb-5">
+                <h1 class="auth-title" id="main-title">Portail d'authentification</h1>
+                <p class="auth-subtitle" aria-describedby="main-title">
+                    Accédez à votre espace dédié pour une surveillance médicale innovante et personnalisée
+                </p>
+            </div>
 
-                        <!-- Section Connexion -->
-                        <div class="row mt-5">
-                            <div class="col-md-6 mb-4">
-                                <div class="card shadow-sm">
-                                    <div class="card-header">
-                                        <img src="{{ url_for('static', filename='images/patient-avatar.png') }}" alt="Avatar Patient" class="avatar">
-                                        <h5>Connexion Patient</h5>
+            <!-- Cartes d'authentification -->
+            <div class="row justify-content-center g-5">
+                <!-- Patient -->
+                <div class="col-xl-5 col-lg-6">
+                    <div class="auth-card-wrapper">
+                        <div class="auth-card card-patient" role="region" aria-labelledby="patient-title">
+                            <div class="card-header">
+                                <div class="avatar-container avatar-patient">
+                                    <img src="{{ url_for('static', filename='images/patient-avatar.png') }}"
+                                         alt="Avatar patient - Représentation graphique d'un patient"
+                                         class="avatar"
+                                         loading="lazy"
+                                         onerror="this.classList.add('skeleton'); this.alt='Avatar patient générique';">
+                                    <div class="avatar-icon" aria-hidden="true">
+                                        <i class="fas fa-user-injured"></i>
                                     </div>
-                                    <div class="card-body d-flex align-items-center justify-content-center flex-column">
-    <form action="{{ url_for('login_patient') }}" method="POST" class="w-100">
-        <div class="form-group">
-            <label for="username_patient">Nom d'utilisateur</label>
-            <input type="text" id="username_patient" name="username" class="form-control" required>
-        </div>
-        <div class="form-group">
-            <label for="password_patient">Mot de passe</label>
-            <input type="password" id="password_patient" name="password" class="form-control" required>
-        </div>
-        <div class="text-center">
-            <button type="submit" class="btn btn-pink btn-custom">Se connecter</button>
-        </div>
-    </form>
-    <a href="{{ url_for('register_patient') }}" class="btn btn-custom mt-3">S'inscrire comme Patient</a>
-</div>
-
                                 </div>
+                                <h3 id="patient-title" class="card-title">Espace Patient</h3>
+                                <p class="card-subtitle">Surveillance et auto-dépistage</p>
                             </div>
-                            <div class="col-md-6 mb-4">
-                                <div class="card shadow-sm">
-                                    <div class="card-header">
-                                        <img src="{{ url_for('static', filename='images/medecin-avatar.png') }}" alt="Avatar Médecin" class="avatar">
-                                        <h5>Connexion Médecin</h5>
-                                    </div>
-                                    <div class="card-body d-flex align-items-center justify-content-center flex-column">
-    <form action="{{ url_for('login_medecin') }}" method="POST" class="w-100">
-        <div class="form-group">
-            <label for="username_medecin">Nom d'utilisateur</label>
-            <input type="text" id="username_medecin" name="username" class="form-control" required>
-        </div>
-        <div class="form-group">
-            <label for="password_medecin">Mot de passe</label>
-            <input type="password" id="password_medecin" name="password" class="form-control" required>
-        </div>
-        <div class="text-center">
-            <button type="submit" class="btn btn-pink btn-custom">Se connecter</button>
-        </div>
-    </form>
-    <a href="{{ url_for('register_medecin') }}" class="btn btn-custom mt-3">S'inscrire comme Médecin</a>
-</div>
 
+                            <div class="card-body">
+                                <form action="{{ url_for('login_patient') }}" method="POST" class="auth-form" id="form-patient">
+                                    <div class="form-group">
+                                        <label for="username_patient" class="form-label">
+                                            <i class="fas fa-user-circle" aria-hidden="true"></i>
+                                            Identifiant
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="text"
+                                                   id="username_patient"
+                                                   name="username"
+                                                   class="form-control"
+                                                   placeholder="Votre identifiant"
+                                                   required
+                                                   aria-required="true"
+                                                   autocomplete="username">
+                                            <span class="input-icon" aria-hidden="true">
+                                                <i class="fas fa-user"></i>
+                                            </span>
+                                            <div class="invalid-feedback">
+                                                Veuillez saisir votre identifiant
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="password_patient" class="form-label">
+                                            <i class="fas fa-lock" aria-hidden="true"></i>
+                                            Mot de passe
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="password"
+                                                   id="password_patient"
+                                                   name="password"
+                                                   class="form-control"
+                                                   placeholder="Votre mot de passe"
+                                                   required
+                                                   aria-required="true"
+                                                   autocomplete="current-password">
+                                            <span class="input-icon" aria-hidden="true">
+                                                <i class="fas fa-key"></i>
+                                            </span>
+                                            <div class="invalid-feedback">
+                                                Veuillez saisir votre mot de passe
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button type="submit" class="btn-auth btn-patient" aria-label="Se connecter en tant que patient">
+                                        <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
+                                        Connexion Patient
+                                    </button>
+                                </form>
+
+                                <a href="{{ url_for('register_patient') }}" class="btn-register" role="button">
+                                    <i class="fas fa-user-plus" aria-hidden="true"></i>
+                                    S'inscrire comme Patient
+                                </a>
+
+                                <div class="utility-links">
+                                    <a href="{{ url_for('forgot_password_page') }}" class="utility-link">
+                                        <i class="fas fa-key" aria-hidden="true"></i>
+                                        Mot de passe oublié ?
+                                    </a>
                                 </div>
                             </div>
                         </div>
-                        <!-- Fin Section Connexion -->
+                    </div>
+                </div>
+
+                <!-- Médecin -->
+                <div class="col-xl-5 col-lg-6">
+                    <div class="auth-card-wrapper">
+                        <div class="auth-card card-doctor" role="region" aria-labelledby="doctor-title">
+                            <div class="card-header">
+                                <div class="avatar-container avatar-doctor">
+                                    <img src="{{ url_for('static', filename='images/medecin-avatar.png') }}"
+                                         alt="Avatar médecin - Représentation graphique d'un médecin"
+                                         class="avatar"
+                                         loading="lazy"
+                                         onerror="this.classList.add('skeleton'); this.alt='Avatar médecin générique';">
+                                    <div class="avatar-icon" aria-hidden="true">
+                                        <i class="fas fa-user-md"></i>
+                                    </div>
+                                </div>
+                                <h3 id="doctor-title" class="card-title">Espace Médecin</h3>
+                                <p class="card-subtitle">Suivi médical et diagnostics</p>
+                            </div>
+
+                            <div class="card-body">
+                                <form action="{{ url_for('login_medecin') }}" method="POST" class="auth-form" id="form-doctor">
+                                    <div class="form-group">
+                                        <label for="username_medecin" class="form-label">
+                                            <i class="fas fa-user-md" aria-hidden="true"></i>
+                                            Identifiant professionnel
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="text"
+                                                   id="username_medecin"
+                                                   name="username"
+                                                   class="form-control"
+                                                   placeholder="Votre identifiant"
+                                                   required
+                                                   aria-required="true"
+                                                   autocomplete="username">
+                                            <span class="input-icon" aria-hidden="true">
+                                                <i class="fas fa-id-card"></i>
+                                            </span>
+                                            <div class="invalid-feedback">
+                                                Veuillez saisir votre identifiant professionnel
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="password_medecin" class="form-label">
+                                            <i class="fas fa-lock" aria-hidden="true"></i>
+                                            Mot de passe
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="password"
+                                                   id="password_medecin"
+                                                   name="password"
+                                                   class="form-control"
+                                                   placeholder="Votre mot de passe"
+                                                   required
+                                                   aria-required="true"
+                                                   autocomplete="current-password">
+                                            <span class="input-icon" aria-hidden="true">
+                                                <i class="fas fa-key"></i>
+                                            </span>
+                                            <div class="invalid-feedback">
+                                                Veuillez saisir votre mot de passe
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button type="submit" class="btn-auth btn-doctor" aria-label="Se connecter en tant que médecin">
+                                        <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
+                                        Connexion Médecin
+                                    </button>
+                                </form>
+
+                                <a href="{{ url_for('register_medecin') }}" class="btn-register" role="button">
+                                    <i class="fas fa-user-md" aria-hidden="true"></i>
+                                    S'inscrire comme Médecin
+                                </a>
+
+                                <div class="utility-links">
+                                    <a href="{{ url_for('forgot_password_page') }}" class="utility-link">
+                                        <i class="fas fa-key" aria-hidden="true"></i>
+                                        Mot de passe oublié ?
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </section>
+        </div>
     </main>
 
-  <footer class="site-footer">
-    <div class="container">
-        <div class="row">
-            <div class="col-12 text-center custom-footer-width">
-                <p class="mb-0">© 2023 HealthCare Bra System. Tous droits réservés.</p>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-12 text-center">
-                <ul class="social-icon">
-                    <li class="social-icon-item"><a href="#" class="social-icon-link bi-twitter"></a></li>
-                    <li class="social-icon-item"><a href="#" class="social-icon-link bi-facebook"></a></li>
-                    <li class="social-icon-item"><a href="#" class="social-icon-link bi-instagram"></a></li>
-                    <li class="social-icon-item"><a href="#" class="social-icon-link bi-youtube"></a></li>
-                    <li class="social-icon-item"><a href="#" class="social-icon-link bi-whatsapp"></a></li>
-                </ul>
-            </div>
-        </div>
+    <!-- Badge Hackathon -->
+    <div class="hackathon-badge" role="status" aria-label="Projet Hackathon 2026" tabindex="0">
+        <i class="fas fa-trophy" aria-hidden="true"></i>
+        <span>Projet Hackathon 2026</span>
     </div>
-</footer>
 
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <!-- Footer -->
+    <footer class="site-footer" role="contentinfo">
+        <div class="container">
+            <div class="row g-5">
+                <div class="col-lg-4 col-md-6">
+                    <div class="mb-4">
+                        <img src="static/images/logo.png" class="logo img-fluid mb-3" alt="Logo HCBS" height="55" loading="lazy">
+                        <p class="text-light" style="color: var(--gris-clair);">
+                            HealthCare Bra System - HCBS<br>
+                            <small>Innovation médicale pour une meilleure santé</small>
+                        </p>
+                        <div class="mt-4">
+                            <a href="https://www.researchgate.net/profile/Achraf-Elouerghi-2"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               class="btn btn-sm"
+                               style="background: var(--rose-medical); color: white; border: none; padding: 8px 20px;">
+                                <i class="bi bi-person-workspace me-1"></i>
+                                Accéder à la Recherche
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 col-md-6">
+                    <h5 class="site-footer-title">Nos partenaires</h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <a href="http://www.um5.ac.ma/um5/" target="_blank" rel="noopener noreferrer" class="footer-menu-link">
+                                Université Mohammed V de Rabat
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="https://www.add.gov.ma/" target="_blank" rel="noopener noreferrer" class="footer-menu-link">
+                                Agence de Développement du Digital
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="https://www.cnrst.ma/fr/" target="_blank" rel="noopener noreferrer" class="footer-menu-link">
+                                CNRST - Centre National pour la Recherche Scientifique et Technique
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="http://ensias.um5.ac.ma/" target="_blank" rel="noopener noreferrer" class="footer-menu-link">
+                                ENSIAS
+                            </a>
+                        </li>
+                        <li>
+                            <a href="http://ensam.um5.ac.ma/" target="_blank" rel="noopener noreferrer" class="footer-menu-link">
+                                ENSAM Rabat
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="col-lg-4 col-md-6">
+                    <h5 class="site-footer-title">Coordonnées de contact</h5>
+                    <div class="mb-3">
+                        <p class="mb-2 d-flex align-items-center">
+                            <i class="bi-telephone me-2" aria-hidden="true"></i>
+                            <a href="tel:+212661512310" class="footer-menu-link">+212 6615-12310</a>
+                        </p>
+                        <p class="mb-2 d-flex align-items-center">
+                            <i class="bi-envelope me-2" aria-hidden="true"></i>
+                            <a href="mailto:achraf_elouerghi@um5.ac.ma" class="footer-menu-link">
+                                achraf_elouerghi@um5.ac.ma
+                            </a>
+                        </p>
+                        <p class="d-flex align-items-start">
+                            <i class="bi-geo-alt me-2 mt-1" aria-hidden="true"></i>
+                            <span class="text-light" style="color: var(--gris-clair);">
+                                ENSAM RABAT, B.P. 6207 Avenue des Forces Armées Royales, Rabat 10100, Maroc
+                            </span>
+                        </p>
+                    </div>
+
+                    <div class="social-links mt-4">
+                        <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" class="text-light me-3" aria-label="Twitter">
+                            <i class="bi-twitter h4"></i>
+                        </a>
+                        <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" class="text-light me-3" aria-label="Facebook">
+                            <i class="bi-facebook h4"></i>
+                        </a>
+                        <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" class="text-light me-3" aria-label="Instagram">
+                            <i class="bi-instagram h4"></i>
+                        </a>
+                        <a href="https://ma.linkedin.com/in/achraf-elouerghi-aaa4791a1"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           class="text-light"
+                           aria-label="LinkedIn">
+                            <i class="bi-linkedin h4"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="site-footer-bottom">
+            <div class="container">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <p class="mb-0" style="color: var(--gris-clair); font-size: 0.9rem;">
+                            © 2026 HealthCare Bra System. Tous droits réservés.
+                        </p>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <a href="{{ url_for('privacy_policy') }}" class="footer-menu-link me-3">Confidentialité</a>
+                        <a href="{{ url_for('terms_of_service') }}" class="footer-menu-link">Conditions d'utilisation</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Débogage et monitoring -->
+    <script>
+        // Performance monitoring
+        const perfStart = performance.now();
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const perfEnd = performance.now();
+            console.log(`🚀 Page chargée en ${Math.round(perfEnd - perfStart)}ms`);
+
+            // Message de bienvenue avec style
+            console.log('%c 🩺 HCBS - Portail d\'authentification sécurisé 🎗️',
+                'background: linear-gradient(90deg, #ff4081, #4fc3f7); color: white; font-size: 16px; padding: 12px; border-radius: 10px; font-weight: bold;');
+
+            // Vérification des images
+            const images = document.querySelectorAll('img');
+            images.forEach(img => {
+                if (!img.complete || img.naturalHeight === 0) {
+                    console.warn(`Image non chargée: ${img.src}`);
+                    img.classList.add('skeleton');
+                }
+            });
+
+            // Gestion des erreurs de formulaire améliorée
+            const forms = document.querySelectorAll('.auth-form');
+            forms.forEach(form => {
+                form.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+
+                    const formData = new FormData(this);
+                    const submitBtn = this.querySelector('button[type="submit"]');
+                    const originalText = submitBtn.innerHTML;
+                    const inputs = this.querySelectorAll('input[required]');
+                    let isValid = true;
+
+                    // Validation côté client améliorée
+                    inputs.forEach(input => {
+                        const value = input.value.trim();
+                        const parent = input.closest('.input-group');
+
+                        if (!value) {
+                            input.classList.add('is-invalid');
+                            parent.querySelector('.invalid-feedback').style.display = 'block';
+                            isValid = false;
+                        } else {
+                            input.classList.remove('is-invalid');
+                            parent.querySelector('.invalid-feedback').style.display = 'none';
+
+                            // Validation supplémentaire pour l'email
+                            if (input.type === 'email') {
+                                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                                if (!emailRegex.test(value)) {
+                                    input.classList.add('is-invalid');
+                                    parent.querySelector('.invalid-feedback').textContent = 'Email invalide';
+                                    parent.querySelector('.invalid-feedback').style.display = 'block';
+                                    isValid = false;
+                                }
+                            }
+                        }
+                    });
+
+                    if (!isValid) {
+                        showNotification('Veuillez corriger les erreurs dans le formulaire', 'warning');
+                        return;
+                    }
+
+                    // Animation de chargement
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = `
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        Connexion en cours...
+                    `;
+
+                    try {
+                        // Simulation d'un délai réseau
+                        await new Promise(resolve => setTimeout(resolve, 1500));
+
+                        // Soumission réelle du formulaire
+                        this.submit();
+
+                    } catch (error) {
+                        console.error('Erreur de soumission:', error);
+                        showNotification('Erreur de connexion au serveur', 'error');
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalText;
+                    }
+                });
+            });
+
+            // Amélioration des interactions
+            const cards = document.querySelectorAll('.auth-card');
+            cards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.zIndex = '10';
+                });
+
+                card.addEventListener('mouseleave', function() {
+                    this.style.zIndex = '1';
+                });
+            });
+
+            // Sécurité : Masquer les mots de passe lors de l'inspection
+            const passwordInputs = document.querySelectorAll('input[type="password"]');
+            passwordInputs.forEach(input => {
+                input.addEventListener('copy', function(e) {
+                    if (!confirm('Copier un mot de passe peut être risqué. Continuer ?')) {
+                        e.preventDefault();
+                    }
+                });
+            });
+
+            // Accessibilité : Focus management
+            const firstInput = document.querySelector('input[required]');
+            if (firstInput) {
+                firstInput.focus();
+            }
+
+            // Gestion des erreurs d'image
+            const avatarImages = document.querySelectorAll('.avatar');
+            avatarImages.forEach(img => {
+                img.onerror = function() {
+                    this.style.display = 'none';
+                    const fallback = document.createElement('div');
+                    fallback.className = 'avatar-fallback';
+                    fallback.style.cssText = `
+                        width: 100%;
+                        height: 100%;
+                        border-radius: 50%;
+                        background: linear-gradient(135deg, var(--rose-medical) 0%, var(--bleu-medical) 100%);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: white;
+                        font-size: 2rem;
+                    `;
+                    const icon = this.closest('.avatar-patient') ? '👤' : '👨‍⚕️';
+                    fallback.textContent = icon;
+                    this.parentNode.appendChild(fallback);
+                };
+            });
+
+            // Support tactile amélioré
+            document.addEventListener('touchstart', function() {}, {passive: true});
+        });
+
+        // Fonction de notification améliorée
+        function showNotification(message, type = 'info') {
+            // Retirer les notifications existantes
+            document.querySelectorAll('.notification').forEach(n => n.remove());
+
+            const icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+
+            const colors = {
+                success: '#28a745',
+                error: '#dc3545',
+                warning: '#ffc107',
+                info: '#17a2b8'
+            };
+
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.setAttribute('role', 'alert');
+            notification.setAttribute('aria-live', 'assertive');
+            notification.innerHTML = `
+                <span style="font-size: 1.2rem;">${icons[type] || icons.info}</span>
+                <span style="flex: 1;">${message}</span>
+                <button style="background: none; border: none; color: inherit; cursor: pointer; font-size: 1.2rem;"
+                        onclick="this.parentElement.remove()"
+                        aria-label="Fermer la notification">
+                    ×
+                </button>
+            `;
+
+            notification.style.cssText = `
+                background: linear-gradient(135deg, ${colors[type]}, ${colors[type]}dd);
+                color: white;
+                border-left: 5px solid rgba(255,255,255,0.3);
+            `;
+
+            document.body.appendChild(notification);
+
+            // Auto-remove après 5 secondes
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
+        // Service Worker pour PWA (optionnel)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js').then(function(registration) {
+                    console.log('ServiceWorker enregistré avec succès:', registration.scope);
+                }).catch(function(err) {
+                    console.log('Échec d\'enregistrement du ServiceWorker:', err);
+                });
+            });
+        }
+
+        // Tracking des performances (optionnel)
+        window.addEventListener('load', function() {
+            if ('PerformanceObserver' in window) {
+                const observer = new PerformanceObserver((list) => {
+                    list.getEntries().forEach((entry) => {
+                        console.log(`[Performance] ${entry.name}: ${entry.duration}ms`);
+                    });
+                });
+                observer.observe({ entryTypes: ['paint', 'largest-contentful-paint', 'first-input'] });
+            }
+        });
+    </script>
 </body>
 </html>
